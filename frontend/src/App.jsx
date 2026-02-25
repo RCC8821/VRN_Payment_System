@@ -1,13 +1,18 @@
 // src/App.jsx
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import Login from './Pages/Login';
-import Dashboard from './Pages/Dashboard';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useSelector } from "react-redux";
+import Login from "./Pages/Login";
+import Dashboard from "./Pages/Dashboard";
 
-import Summary from './components/paymentSummary/Summary'
-import SchedulePayment from './components/Payment/SchedulePayment';
-
+import Summary from "./components/paymentSummary/Summary";
+import SchedulePayment from "./components/Payment/SchedulePayment";
+// import Leads from "./components/LeadsSummary/Leads";
 
 const ProtectedRoute = ({ children }) => {
   const { token } = useSelector((state) => state.auth);
@@ -30,13 +35,10 @@ function App() {
             </ProtectedRoute>
           }
         >
+          <Route path="summary" element={<Summary />} />
+          <Route path="SchedulePayment" element={<SchedulePayment />} />
 
-
-     <Route path='summary' element={<Summary/>}/>
-     <Route path='SchedulePayment' element={<SchedulePayment/>}/>
-     
-
-
+          {/* <Route path="Leads" element={<Leads />} /> */}
         </Route>
 
         {/* Catch all unknown routes */}

@@ -8,6 +8,7 @@ const cors = require("cors");
 
 const Login = require('./Router/auth')
 const SchedulePayment = require('./controllers/Payment/SchedulePayment')
+const leadsSummary= require('./controllers/Leads/LeadsSummary')
 
 const app = express();
 // 1. CORS (Pehle daalo)
@@ -41,6 +42,9 @@ app.use('/api',Login)
 
 app.use('/api/payment',SchedulePayment)
 
+app.use('/api',leadsSummary)
+
+
 
 // 7. Health Check
 app.get('/', (req, res) => {
@@ -53,4 +57,6 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`CORS enabled for: ${process.env.CLIENT_URL || 'all origins'}`);
 });
+
+
 

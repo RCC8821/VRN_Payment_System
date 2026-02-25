@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser, clearError } from '../features/Auth/LoginSlice';
@@ -115,7 +113,7 @@ const Login = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-300 to-purple-300 rounded-full blur-xl opacity-50" />
               <div className="relative bg-white p-4 rounded-full">
-                <img src='rcc-logo.png' className="w-9 h-9 text-white" />
+                {/* <img src='rcc-logo.png' className="w-9 h-9 text-white" /> */}
               </div>
             </div>
           </div>

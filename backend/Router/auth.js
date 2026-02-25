@@ -8,6 +8,7 @@ const router = express.Router();
 // Allowed user types - हमेशा UPPERCASE में रखो
 const ALLOWED_USER_TYPES = [
   'ADMIN',
+  'CRM'
 ];
 
 // Login Route
