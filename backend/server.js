@@ -7,6 +7,7 @@ const { validateEnv } = require('./config/env');
 const cors = require("cors");
 
 const Login = require('./Router/auth')
+const Booking=require('./controllers/Booking/BookingAmount')
 const SchedulePayment = require('./controllers/Payment/SchedulePayment')
 const leadsSummary= require('./controllers/Leads/LeadsSummary')
 
@@ -39,6 +40,8 @@ validateEnv();
 
 
 app.use('/api',Login)
+
+app.use('/api/Booking',Booking)
 
 app.use('/api/payment',SchedulePayment)
 

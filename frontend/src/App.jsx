@@ -11,6 +11,7 @@ import Login from "./Pages/Login";
 import Dashboard from "./Pages/Dashboard";
 
 import Summary from "./components/paymentSummary/Summary";
+import ActualBookingAmount from "./components/Payment/ActualBookingAmount";
 import SchedulePayment from "./components/Payment/SchedulePayment";
 // import Leads from "./components/LeadsSummary/Leads";
 
@@ -36,6 +37,7 @@ function App() {
           }
         >
           <Route path="summary" element={<Summary />} />
+          <Route path="ActualBooking" element={<ActualBookingAmount />} />
           <Route path="SchedulePayment" element={<SchedulePayment />} />
 
           {/* <Route path="Leads" element={<Leads />} /> */}

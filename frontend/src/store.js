@@ -3,6 +3,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './features/Auth/LoginSlice';
 import { schedulePaymentApi } from '../src/features/SchedulePayment/SchedulePaymentSlice';   
+import {actualBookingApi} from './features/SchedulePayment/ActualBookingSlice'
 // import {summaryApi} from '../src/features/LeadsSummary/SummarySlice'
 
 
@@ -12,6 +13,7 @@ export const store = configureStore({
 
     // RTK Query reducers
     [schedulePaymentApi.reducerPath]: schedulePaymentApi.reducer,
+    [actualBookingApi.reducerPath]: actualBookingApi.reducer,
     // [summaryApi.reducerPath]: summaryApi.reducer,
 
    
@@ -22,6 +24,7 @@ export const store = configureStore({
       serializableCheck: false,
     })
       .concat(schedulePaymentApi.middleware)
+      .concat(actualBookingApi.middleware)
       // .concat(summaryApi.middleware)
       
 });
