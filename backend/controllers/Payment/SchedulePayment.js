@@ -4,6 +4,7 @@ const express = require('express');
 const { sheets, spreadsheetId } = require('../../config/googleSheet');
 const router = express.Router();
 
+///// try //
 
 router.get('/Schedule-Payment', async (req, res) => {
   try {
@@ -12,132 +13,163 @@ router.get('/Schedule-Payment', async (req, res) => {
       spreadsheetId,
       range: 'FMS!A8:Z',
     });
-    let fmsRows = fmsResponse.data.values || [];
+    const fmsRows = fmsResponse.data.values || [];
 
     if (fmsRows.length === 0) {
-      return res.json({ success: true, data: [] });
+      return res.json({ success: true, data: [], note: "No data in FMS sheet" });
     }
 
-    // 2. Fetch Payment sheet → previous payments
+    // 2. Fetch Bookings sheet → Booking ID (A) aur Amount Received (AN)
+    const bookingsResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Bookings!A:AN',
+    });
+    const bookingsRows = bookingsResponse.data.values || [];
+
+    const bookingAmountMap = new Map();
+
+    bookingsRows.forEach((row, idx) => {
+      if (idx === 0) return; // skip header row
+
+      if (row.length < 40) return; // AN column nahi hai to skip
+
+      let bookingId = (row[0] || '').trim();              // Column A = Booking ID
+      bookingId = bookingId.replace(/\s+/g, ' ');         // normalize multiple spaces
+
+      const amountReceived = (row[39] || '').trim();      // Column AN = Amount Received (index 39)
+
+      if (bookingId && amountReceived !== '') {
+        bookingAmountMap.set(bookingId, amountReceived);
+      }
+
+      // Debug: pehle 5 rows console mein dikhao (ek baar check karne ke baad comment out kar dena)
+      if (idx <= 5) {
+        console.log(`Bookings row ${idx}: ID="${bookingId}" | Amount Received="${amountReceived}"`);
+      }
+    });
+
+    console.log(`Bookings sheet se ${bookingAmountMap.size} valid records loaded`);
+
+    // 3. Fetch Payment sheet → previous payments
     const paymentsResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Payment!A2:Y',
     });
-    let paymentsRows = paymentsResponse.data.values || [];
+    const paymentsRows = paymentsResponse.data.values || [];
 
     const paymentMap = new Map();
 
     paymentsRows.forEach(row => {
-      if (row.length < 25) return; // safety - up to col Y (index 24)
+      if (row.length < 25) return;
 
-      const bookingId = (row[0] || '').trim();   // A - Booking ID
-      const paymentId  = (row[1] || '').trim();  // B - Payment ID
+      const bookingId = (row[0] || '').trim();
+      const paymentId = (row[1] || '').trim();
 
       if (!bookingId || !paymentId) return;
 
       const key = `${paymentId}|${bookingId}`;
 
-      if (!paymentMap.has(key)) {
-        paymentMap.set(key, []);
-      }
+      if (!paymentMap.has(key)) paymentMap.set(key, []);
 
-      const amountStr = (row[22] || '').trim().replace(/[^0-9.-]/g, ''); // W
+      const amountStr = (row[22] || '').trim().replace(/[^0-9.-]/g, '');
       const amount = parseFloat(amountStr);
 
       if (!isNaN(amount) && amount > 0) {
         paymentMap.get(key).push({
-          previousReceviedAmountDate: (row[21] || '').trim(), // V
+          previousReceviedAmountDate: (row[21] || '').trim(),
           PreviousAmount: amountStr || '0',
-          NextDate: (row[23] || '').trim(),                   // X
-          previousRemark: (row[24] || '').trim(),             // Y
+          NextDate: (row[23] || '').trim(),
+          previousRemark: (row[24] || '').trim(),
         });
       }
     });
 
-    // 3. Fetch Scoring sheet → follow-up history
+    // 4. Fetch Scoring sheet → follow-up history
     const scoringResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Scoring!A2:I',
     });
-    let scoringRows = scoringResponse.data.values || [];
+    const scoringRows = scoringResponse.data.values || [];
 
     const scoringMap = new Map();
 
     scoringRows.forEach(row => {
-      if (row.length < 9) return; // up to col I (index 8)
+      if (row.length < 9) return;
 
-      const bookingId   = (row[1] || '').trim();   // B
-      const paymentId   = (row[2] || '').trim();   // C
+      const bookingId = (row[1] || '').trim();
+      const paymentId = (row[2] || '').trim();
 
       if (!bookingId || !paymentId) return;
 
       const key = `${paymentId}|${bookingId}`;
 
-      if (!scoringMap.has(key)) {
-        scoringMap.set(key, []);
-      }
+      if (!scoringMap.has(key)) scoringMap.set(key, []);
 
       scoringMap.get(key).push({
-        timestamp:          (row[0] || '').trim(),   // A
-        schedules:          (row[3] || '').trim(),   // D
-        dateOfFollowup:     (row[4] || '').trim(),   // E
-        nextDateOfFollowup: (row[5] || '').trim(),   // F
-        followupCount:      (row[6] || '').trim(),   // G
-        remark:             (row[7] || '').trim(),   // H
-        status:             (row[8] || '').trim(),   // I
+        timestamp: (row[0] || '').trim(),
+        schedules: (row[3] || '').trim(),
+        dateOfFollowup: (row[4] || '').trim(),
+        nextDateOfFollowup: (row[5] || '').trim(),
+        followupCount: (row[6] || '').trim(),
+        remark: (row[7] || '').trim(),
+        status: (row[8] || '').trim(),
       });
     });
 
-    // 4. Combine + filter where BalanceToRecive !== '0' and not empty
-    const filteredData = fmsRows
-      // .filter(row => {
-      //   // BalanceToRecive is in column R → index 17
-      //   const balanceStr = (row[17] || '').trim();
-        
-      //   // Skip if empty or exactly "0" (also handles "0.00", " ₹0 ", etc.)
-      //   if (!balanceStr || balanceStr === '0' || balanceStr === '0.00' || balanceStr === '₹0') {
-      //     return false;
-      //   }
+    // 5. Combine everything
+    const filteredData = fmsRows.map(row => {
+      let bookingId = (row[0] || '').trim();              // FMS Column A
+      bookingId = bookingId.replace(/\s+/g, ' ');         // normalize
 
-      //   // Optional: skip if it's not a valid number
-      //   const balanceNum = parseFloat(balanceStr.replace(/[^0-9.-]/g, ''));
-      //   return !isNaN(balanceNum) && balanceNum > 0;
-      // })
-      .map(row => {
-        const bookingId = (row[0] || '').trim();
-        const paymentId = (row[1] || '').trim();
+      const paymentId = (row[1] || '').trim();
+      const key = `${paymentId}|${bookingId}`;
 
-        const key = `${paymentId}|${bookingId}`;
+      // Booking amount Bookings sheet se (fallback message for debugging)
+      const bookingAmount = bookingAmountMap.get(bookingId) || "-";
 
-        return {
-          Planned:        (row[18] || '').trim(),
-          bookingId,
-          paymentId,
-          applicantName:  (row[2] || '').trim(),
-          contact:        (row[3] || '').trim(),
-          email:          (row[4] || '').trim(),
-          CurrentAddress: (row[5] || '').trim(),
-          agreementValue: (row[6] || '').trim(),
-          bookingAmount:  (row[7] || '').trim(),
-          Project:        (row[8] || '').trim(),
-          unitCode:       (row[9] || '').trim(),
-          block:          (row[10] || '').trim(),
-          unitNo:         (row[11] || '').trim(),
-          unitType:       (row[12] || '').trim(),
-          size:           (row[13] || '').trim(),
-          projectType:    (row[14] || '').trim(),
-          Date:           (row[15] || '').trim(),
-          Amount:         (row[16] || '').trim(),
-          BalanceToRecive:(row[17] || '').trim(),
-          Actual:         (row[18] || '').trim(),
-          FollowUp:       (row[25] || '').trim(),
+      // Optional: sirf kuch rows ka debug (console overload na ho)
+      if (Math.random() < 0.05) {
+        console.log(`Match check → ID: "${bookingId}" | Found: ${bookingAmountMap.has(bookingId)} | Amount: "${bookingAmount}"`);
+      }
 
-          previousPayments: paymentMap.get(key) || [],
-          followUpHistory:  scoringMap.get(key) || [],
-        };
-      });
+      return {
+        Planned: (row[18] || '').trim(),
+        bookingId,
+        paymentId,
+        applicantName: (row[2] || '').trim(),
+        contact: (row[3] || '').trim(),
+        email: (row[4] || '').trim(),
+        CurrentAddress: (row[5] || '').trim(),
+        agreementValue: (row[6] || '').trim(),
 
-    res.json({ success: true, data: filteredData });
+        bookingAmount,   // ← Yeh ab Bookings!AN se aa raha hai
+
+        Project: (row[8] || '').trim(),
+        unitCode: (row[9] || '').trim(),
+        block: (row[10] || '').trim(),
+        unitNo: (row[11] || '').trim(),
+        unitType: (row[12] || '').trim(),
+        size: (row[13] || '').trim(),
+        projectType: (row[14] || '').trim(),
+        Date: (row[15] || '').trim(),
+        Amount: (row[16] || '').trim(),
+        BalanceToRecive: (row[17] || '').trim(),
+        Actual: (row[18] || '').trim(),
+        FollowUp: (row[25] || '').trim(),
+
+        previousPayments: paymentMap.get(key) || [],
+        followUpHistory: scoringMap.get(key) || [],
+      };
+    });
+
+    res.json({
+      success: true,
+      data: filteredData,
+      debug_summary: {
+        bookings_records_loaded: bookingAmountMap.size,
+        sample_booking_ids: Array.from(bookingAmountMap.keys()).slice(0, 5)
+      }
+    });
 
   } catch (error) {
     console.error('GET /Schedule-Payment error:', error.message);
@@ -149,226 +181,154 @@ router.get('/Schedule-Payment', async (req, res) => {
   }
 });
 
+///// final 
 
-// router.post('/update-Schedule-payment', async (req, res) => {
+
+// router.get('/Schedule-Payment', async (req, res) => {
 //   try {
-//     const {
-//       paymentId = '',
-//       status = '',
-//       lastDateOfReceiving = '',
-//       amountReceived = '',
-//       nextDate = '',
-//       remark = '',
-//       bankName = '',
-//       paymentMode = '',
-//       paymentDetails = '',
-//       Planned = '',
-//       bookingId = '',
-//       applicantName = '',
-//       contact = '',
-//       email = '',
-//       CurrentAddress = '',
-//       agreementValue = '',
-//       bookingAmount = '',
-//       Project_Name = '',
-//       unitCode = '',
-//       block = '',
-//       unitNo = '',
-//       unitType = '',
-//       size = '',
-//       projectType = '',
-//       Date: submissionDate = ''
-//     } = req.body;
-
-//     if (!paymentId?.trim() || !bookingId?.trim()) {
-//       return res.status(400).json({ success: false, message: 'paymentId और bookingId जरूरी हैं' });
-//     }
-
-//     console.log('Request body:', req.body);  // ← यहाँ चेक करो lastDateOfReceiving क्या आ रहा है
-
-//     const trimmedPaymentId = paymentId.trim();
-//     const targetBookingId = bookingId.trim();
-//     const normalizedStatus = (status || '').trim().toLowerCase();
-
-//     console.log(`Processing: paymentId=${trimmedPaymentId} | bookingId=${targetBookingId} | status=${normalizedStatus}`);
-
-//     let effectiveNextDate = (nextDate || '').trim();
-//     const doneStatuses = ['done', 'completed', 'paid', 'complete'];
-//     const isDone = doneStatuses.includes(normalizedStatus);
-
-//     if (isDone) {
-//       effectiveNextDate = '-';
-//       console.log('Status is DONE → Next Date forced to "-"');
-//     } else if (
-//       (normalizedStatus === 'partial' || normalizedStatus === 'pending') &&
-//       !effectiveNextDate.trim()
-//     ) {
-//       console.warn(`Warning: ${normalizedStatus} status but nextDate is empty`);
-//     }
-
-//     // Partial/Pending में lastDateOfReceiving अनिवार्य बनाने के लिए (optional - uncomment अगर चाहो)
-//     // if ((normalizedStatus === 'partial' || normalizedStatus === 'pending') && !lastDateOfReceiving?.trim()) {
-//     //   return res.status(400).json({ success: false, message: 'Partial या Pending में Last Date of Receiving भरना जरूरी है' });
-//     // }
-
-//     // 1. FMS अपडेट
+//     // 1. Fetch FMS data (main source)
 //     const fmsResponse = await sheets.spreadsheets.values.get({
 //       spreadsheetId,
-//       range: 'FMS!A8:AB',
+//       range: 'FMS!A8:Z',
 //     });
+//     let fmsRows = fmsResponse.data.values || [];
 
-//     const fmsRows = fmsResponse.data.values || [];
-//     const fmsRowIndex = fmsRows.findIndex(row => (row[1] || '').trim() === trimmedPaymentId);
+//     if (fmsRows.length === 0) {
+//       return res.json({ success: true, data: [] });
+//     }
 
-//     let fmsRowNum = null;
-//     const fmsUpdates = [];
-//     let followupCount = '0';
+//     // 2. Fetch Payment sheet → previous payments
+//     const paymentsResponse = await sheets.spreadsheets.values.get({
+//       spreadsheetId,
+//       range: 'Payment!A2:Y',
+//     });
+//     let paymentsRows = paymentsResponse.data.values || [];
 
-//     if (fmsRowIndex !== -1) {
-//       fmsRowNum = 8 + fmsRowIndex;
-//       const row = fmsRows[fmsRowIndex];
+//     const paymentMap = new Map();
 
-//       const prevReceived = parseFloat(row[22] || '0') || 0;  // W - Total Received
-//       const newAmount = parseFloat(amountReceived) || 0;
-//       const totalReceived = prevReceived + newAmount;
+//     paymentsRows.forEach(row => {
+//       if (row.length < 25) return; // safety - up to col Y (index 24)
 
-//       followupCount = (row[25] || '0').trim();  // Z
-//       let newFollowup = parseInt(followupCount, 10) || 0;
-//       newFollowup += 1;
-//       followupCount = newFollowup.toString();
+//       const bookingId = (row[0] || '').trim();   // A - Booking ID
+//       const paymentId  = (row[1] || '').trim();  // B - Payment ID
 
-//       const fields = [
-//         { col: 'U', val: normalizedStatus },
-//         { col: 'V', val: lastDateOfReceiving.trim() || '' },  // ← अब trim करके भेजो, blank भी update हो सकता है अगर चाहो
-//         { col: 'W', val: totalReceived.toString() },
-//         { col: 'X', val: effectiveNextDate },
-//         { col: 'Y', val: remark?.trim() || '' },
-//         { col: 'Z', val: followupCount }
-//       ];
+//       if (!bookingId || !paymentId) return;
 
-//       fields.forEach(({ col, val }) => {
-//         // V column (lastDate) को blank होने पर भी update करने दो अगर value '' है
-//         // अगर blank skip करना है तो पुरानी condition रख सकते हो
-//         fmsUpdates.push({
-//           range: `FMS!${col}${fmsRowNum}`,
-//           values: [[val]]
+//       const key = `${paymentId}|${bookingId}`;
+
+//       if (!paymentMap.has(key)) {
+//         paymentMap.set(key, []);
+//       }
+
+//       const amountStr = (row[22] || '').trim().replace(/[^0-9.-]/g, ''); // W
+//       const amount = parseFloat(amountStr);
+
+//       if (!isNaN(amount) && amount > 0) {
+//         paymentMap.get(key).push({
+//           previousReceviedAmountDate: (row[21] || '').trim(), // V
+//           PreviousAmount: amountStr || '0',
+//           NextDate: (row[23] || '').trim(),                   // X
+//           previousRemark: (row[24] || '').trim(),             // Y
 //         });
-//       });
-//     } else {
-//       followupCount = '1';
-//       console.log(`Payment ID not found in FMS: ${trimmedPaymentId}`);
-//     }
-
-//     // 2. Payment sheet APPEND
-//     if (normalizedStatus !== 'pending') {
-//       const paymentRow = [
-//         targetBookingId,
-//         trimmedPaymentId,
-//         applicantName || '',
-//         contact || '',
-//         email || '',
-//         CurrentAddress || '',
-//         agreementValue || '',
-//         bookingAmount || '',
-//         Project_Name || '',
-//         unitCode || '',
-//         block || '',
-//         unitNo || '',
-//         unitType || '',
-//         size || '',
-//         projectType.trim() || '',
-//         Planned || '',
-//         normalizedStatus || '',
-//         '',                                 // R
-//         bankName?.trim() || '',
-//         paymentMode?.trim() || '',
-//         paymentDetails?.trim() || '',
-//         lastDateOfReceiving.trim() || '',   // V - Last Date of Receiving (यहाँ date आनी चाहिए)
-//         amountReceived || '0',              // W - Amount
-//         effectiveNextDate,                  // X - Next Date
-//         remark?.trim() || ''                // Y - Remark
-//       ];
-
-//       await sheets.spreadsheets.values.append({
-//         spreadsheetId,
-//         range: 'Payment!A:Y',
-//         valueInputOption: 'USER_ENTERED',
-//         resource: { values: [paymentRow] }
-//       });
-
-//       console.log(`Payment row appended for status: ${normalizedStatus}`);
-//     } else {
-//       console.log(`Skipping Payment append (pending)`);
-//     }
-
-//     // 3. Scoring append (बाकी वैसा ही)
-//     const shouldLogToScoring = normalizedStatus === 'pending' ||
-//       (fmsRowIndex !== -1 && followupCount !== '0' && followupCount !== '1');
-
-//     if (shouldLogToScoring) {
-//       const now = new Date();
-//       const timestamp = [
-//         String(now.getDate()).padStart(2, '0'),
-//         String(now.getMonth() + 1).padStart(2, '0'),
-//         now.getFullYear()
-//       ].join('/') + ' ' + [
-//         String(now.getHours()).padStart(2, '0'),
-//         String(now.getMinutes()).padStart(2, '0'),
-//         String(now.getSeconds()).padStart(2, '0')
-//       ].join(':');
-
-//       await sheets.spreadsheets.values.append({
-//         spreadsheetId,
-//         range: 'Scoring!A:I',
-//         valueInputOption: 'USER_ENTERED',
-//         resource: {
-//           values: [[
-//             timestamp,
-//             targetBookingId,
-//             trimmedPaymentId,
-//             projectType || '',
-//             Planned || '',
-//             effectiveNextDate,
-//             followupCount,
-//             remark || '',
-//             normalizedStatus
-//           ]]
-//         }
-//       });
-//     }
-
-//     // 4. FMS batch update
-//     if (fmsUpdates.length > 0) {
-//       await sheets.spreadsheets.values.batchUpdate({
-//         spreadsheetId,
-//         resource: {
-//           valueInputOption: 'USER_ENTERED',
-//           data: fmsUpdates
-//         }
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: 'Payment action recorded successfully',
-//       paymentId: trimmedPaymentId,
-//       bookingId: targetBookingId,
-//       fmsRow: fmsRowNum || 'Not found',
-//       followupCount,
-//       status: normalizedStatus,
-//       nextDate: effectiveNextDate,
-//       lastDateReceived: lastDateOfReceiving || 'Not provided'
+//       }
 //     });
+
+//     // 3. Fetch Scoring sheet → follow-up history
+//     const scoringResponse = await sheets.spreadsheets.values.get({
+//       spreadsheetId,
+//       range: 'Scoring!A2:I',
+//     });
+//     let scoringRows = scoringResponse.data.values || [];
+
+//     const scoringMap = new Map();
+
+//     scoringRows.forEach(row => {
+//       if (row.length < 9) return; // up to col I (index 8)
+
+//       const bookingId   = (row[1] || '').trim();   // B
+//       const paymentId   = (row[2] || '').trim();   // C
+
+//       if (!bookingId || !paymentId) return;
+
+//       const key = `${paymentId}|${bookingId}`;
+
+//       if (!scoringMap.has(key)) {
+//         scoringMap.set(key, []);
+//       }
+
+//       scoringMap.get(key).push({
+//         timestamp:          (row[0] || '').trim(),   // A
+//         schedules:          (row[3] || '').trim(),   // D
+//         dateOfFollowup:     (row[4] || '').trim(),   // E
+//         nextDateOfFollowup: (row[5] || '').trim(),   // F
+//         followupCount:      (row[6] || '').trim(),   // G
+//         remark:             (row[7] || '').trim(),   // H
+//         status:             (row[8] || '').trim(),   // I
+//       });
+//     });
+
+//     // 4. Combine + filter where BalanceToRecive !== '0' and not empty
+//     const filteredData = fmsRows
+//       // .filter(row => {
+//       //   // BalanceToRecive is in column R → index 17
+//       //   const balanceStr = (row[17] || '').trim();
+        
+//       //   // Skip if empty or exactly "0" (also handles "0.00", " ₹0 ", etc.)
+//       //   if (!balanceStr || balanceStr === '0' || balanceStr === '0.00' || balanceStr === '₹0') {
+//       //     return false;
+//       //   }
+
+//       //   // Optional: skip if it's not a valid number
+//       //   const balanceNum = parseFloat(balanceStr.replace(/[^0-9.-]/g, ''));
+//       //   return !isNaN(balanceNum) && balanceNum > 0;
+//       // })
+//       .map(row => {
+//         const bookingId = (row[0] || '').trim();
+//         const paymentId = (row[1] || '').trim();
+
+//         const key = `${paymentId}|${bookingId}`;
+
+//         return {
+//           Planned:        (row[18] || '').trim(),
+//           bookingId,
+//           paymentId,
+//           applicantName:  (row[2] || '').trim(),
+//           contact:        (row[3] || '').trim(),
+//           email:          (row[4] || '').trim(),
+//           CurrentAddress: (row[5] || '').trim(),
+//           agreementValue: (row[6] || '').trim(),
+//           bookingAmount:  (row[7] || '').trim(),
+//           Project:        (row[8] || '').trim(),
+//           unitCode:       (row[9] || '').trim(),
+//           block:          (row[10] || '').trim(),
+//           unitNo:         (row[11] || '').trim(),
+//           unitType:       (row[12] || '').trim(),
+//           size:           (row[13] || '').trim(),
+//           projectType:    (row[14] || '').trim(),
+//           Date:           (row[15] || '').trim(),
+//           Amount:         (row[16] || '').trim(),
+//           BalanceToRecive:(row[17] || '').trim(),
+//           Actual:         (row[18] || '').trim(),
+//           FollowUp:       (row[25] || '').trim(),
+
+//           previousPayments: paymentMap.get(key) || [],
+//           followUpHistory:  scoringMap.get(key) || [],
+//         };
+//       });
+
+//     res.json({ success: true, data: filteredData });
 
 //   } catch (error) {
-//     console.error('POST /update-Schedule-payment error:', error);
+//     console.error('GET /Schedule-Payment error:', error.message);
 //     res.status(500).json({
 //       success: false,
-//       message: 'Server error',
-//       error: error.message
+//       error: 'Failed to fetch schedule payment data',
+//       details: error.message,
 //     });
 //   }
 // });
+
+
 
 
 
