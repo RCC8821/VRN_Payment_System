@@ -1,5 +1,4 @@
 
-
 // import React, { useState, useMemo, useEffect } from 'react';
 // import {
 //   Calendar, DollarSign, Search, AlertCircle,
@@ -139,8 +138,9 @@
 
 //   const stripNum = (str) => Number(String(str || '').replace(/[^0-9.-]/g, '') || 0);
 
-//   const isOverdue = (dateStr) => {
-//     if (!dateStr || dateStr === '—' || dateStr === '-') return false;
+//   /* ── Parse Date Helper ── */
+//   const parseToDate = (dateStr) => {
+//     if (!dateStr || dateStr === '—' || dateStr === '-') return null;
 //     let d;
 //     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
 //       const [dd, mm, yyyy] = dateStr.split('/');
@@ -151,7 +151,12 @@
 //     } else {
 //       d = new Date(dateStr);
 //     }
-//     if (isNaN(d.getTime())) return false;
+//     return isNaN(d?.getTime()) ? null : d;
+//   };
+
+//   const isOverdue = (dateStr) => {
+//     const d = parseToDate(dateStr);
+//     if (!d) return false;
 //     const today = new Date();
 //     today.setHours(0, 0, 0, 0);
 //     return d < today;
@@ -165,11 +170,8 @@
 //       .filter(Boolean)
 //       .sort((a, b) => {
 //         const toMs = (ds) => {
-//           if (/^\d{2}\/\d{2}\/\d{4}$/.test(ds)) {
-//             const [dd, mm, yyyy] = ds.split('/');
-//             return new Date(Number(yyyy), Number(mm) - 1, Number(dd)).getTime();
-//           }
-//           return new Date(ds).getTime();
+//           const d = parseToDate(ds);
+//           return d ? d.getTime() : 0;
 //         };
 //         return toMs(a) - toMs(b);
 //       });
@@ -201,88 +203,36 @@
 //     };
 //   };
 
-//   /* ── ✅ FIXED: Get Next Follow-up for entire Booking (searches ALL schedules including previousPayments) ── */
+//   /* ── Get Next Follow-up for entire Booking ── */
 //   const getNextFollowUpForBooking = (booking) => {
 //     let nextDate = '—';
 //     let count = '—';
 
 //     for (const schedule of booking.schedules) {
-
-//       // ✅ Check previousPayments FIRST - This is where NextDate is stored!
+//       // Check previousPayments FIRST
 //       if (schedule.previousPayments?.length > 0) {
-//         // Sort by date to get the most recent payment
 //         const sortedPayments = [...schedule.previousPayments].sort((a, b) => {
-//           const parseDate = (dateStr) => {
-//             if (!dateStr) return 0;
-//             if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-//               const [dd, mm, yyyy] = dateStr.split('/');
-//               return new Date(Number(yyyy), Number(mm) - 1, Number(dd)).getTime();
-//             }
-//             if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-//               const [yyyy, mm, dd] = dateStr.split('-');
-//               return new Date(Number(yyyy), Number(mm) - 1, Number(dd)).getTime();
-//             }
-//             return new Date(dateStr).getTime() || 0;
-//           };
-//           const dateA = parseDate(a.previousReceviedAmountDate) || new Date(a.timestamp || 0).getTime();
-//           const dateB = parseDate(b.previousReceviedAmountDate) || new Date(b.timestamp || 0).getTime();
+//           const dateA = parseToDate(a.previousReceviedAmountDate)?.getTime() || new Date(a.timestamp || 0).getTime();
+//           const dateB = parseToDate(b.previousReceviedAmountDate)?.getTime() || new Date(b.timestamp || 0).getTime();
 //           return dateB - dateA;
 //         });
 
-//         // Get NextDate from the most recent payment
 //         for (const payment of sortedPayments) {
-//           // Check NextDate (capital N)
-//           if (payment.NextDate &&
-//             payment.NextDate !== '—' &&
-//             payment.NextDate !== '-' &&
-//             payment.NextDate !== '') {
-//             const formattedDate = formatDate(payment.NextDate, true);
-//             if (formattedDate && formattedDate !== '—') {
-//               nextDate = formattedDate;
-//               count = sortedPayments.length;
-//               break;
+//           const fieldsToCheck = ['NextDate', 'nextDate', 'next_date', 'nextFollowupDate'];
+//           for (const field of fieldsToCheck) {
+//             if (payment[field] && payment[field] !== '—' && payment[field] !== '-' && payment[field] !== '') {
+//               const formattedDate = formatDate(payment[field], true);
+//               if (formattedDate && formattedDate !== '—') {
+//                 nextDate = formattedDate;
+//                 count = sortedPayments.length;
+//                 break;
+//               }
 //             }
 //           }
-//           // Check nextDate (lowercase n)
-//           if (nextDate === '—' && payment.nextDate &&
-//             payment.nextDate !== '—' &&
-//             payment.nextDate !== '-' &&
-//             payment.nextDate !== '') {
-//             const formattedDate = formatDate(payment.nextDate, true);
-//             if (formattedDate && formattedDate !== '—') {
-//               nextDate = formattedDate;
-//               count = sortedPayments.length;
-//               break;
-//             }
-//           }
-//           // Check next_date (underscore)
-//           if (nextDate === '—' && payment.next_date &&
-//             payment.next_date !== '—' &&
-//             payment.next_date !== '-' &&
-//             payment.next_date !== '') {
-//             const formattedDate = formatDate(payment.next_date, true);
-//             if (formattedDate && formattedDate !== '—') {
-//               nextDate = formattedDate;
-//               count = sortedPayments.length;
-//               break;
-//             }
-//           }
-//           // Check nextFollowupDate
-//           if (nextDate === '—' && payment.nextFollowupDate &&
-//             payment.nextFollowupDate !== '—' &&
-//             payment.nextFollowupDate !== '-' &&
-//             payment.nextFollowupDate !== '') {
-//             const formattedDate = formatDate(payment.nextFollowupDate, true);
-//             if (formattedDate && formattedDate !== '—') {
-//               nextDate = formattedDate;
-//               count = sortedPayments.length;
-//               break;
-//             }
-//           }
+//           if (nextDate !== '—') break;
 //         }
 //       }
 
-//       // If found, break from schedule loop
 //       if (nextDate !== '—') break;
 
 //       // Check followUpHistory
@@ -292,10 +242,7 @@
 //         );
 
 //         for (const fu of sorted) {
-//           if (fu.nextDateOfFollowup &&
-//             fu.nextDateOfFollowup !== '—' &&
-//             fu.nextDateOfFollowup !== '-' &&
-//             fu.nextDateOfFollowup !== '') {
+//           if (fu.nextDateOfFollowup && fu.nextDateOfFollowup !== '—' && fu.nextDateOfFollowup !== '-' && fu.nextDateOfFollowup !== '') {
 //             const formattedDate = formatDate(fu.nextDateOfFollowup, true);
 //             if (formattedDate && formattedDate !== '—') {
 //               nextDate = formattedDate;
@@ -308,15 +255,11 @@
 
 //       if (nextDate !== '—') break;
 
-//       // Check direct schedule fields as fallback
+//       // Check direct schedule fields
 //       const fieldsToCheck = ['NextDate', 'nextDate', 'nextDateOfFollowup', 'next_date', 'nextFollowupDate'];
 //       for (const field of fieldsToCheck) {
-//         if (schedule[field] &&
-//           schedule[field] !== '—' &&
-//           schedule[field] !== '-' &&
-//           schedule[field] !== '' &&
-//           schedule[field].toUpperCase() !== 'Y' &&
-//           schedule[field].toUpperCase() !== 'N') {
+//         if (schedule[field] && schedule[field] !== '—' && schedule[field] !== '-' && schedule[field] !== '' &&
+//           schedule[field].toUpperCase() !== 'Y' && schedule[field].toUpperCase() !== 'N') {
 //           const formattedDate = formatDate(schedule[field], true);
 //           if (formattedDate && formattedDate !== '—') {
 //             nextDate = formattedDate;
@@ -377,21 +320,9 @@
 //   };
 
 //   const isDateInRange = (dateStr, from, to) => {
-//     if (!dateStr || dateStr === '—' || dateStr === '-') return false;
+//     const target = parseToDate(dateStr);
+//     if (!target) return false;
 //     if (!from && !to) return true;
-
-//     let target;
-//     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-//       const [dd, mm, yyyy] = dateStr.split('/');
-//       target = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-//     } else if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-//       const [yyyy, mm, dd] = dateStr.split('-');
-//       target = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-//     } else {
-//       target = new Date(dateStr);
-//     }
-
-//     if (isNaN(target.getTime())) return false;
 
 //     const start = from ? new Date(from) : new Date(0);
 //     const end = to ? new Date(to) : new Date(8640000000000000);
@@ -714,7 +645,6 @@
 //                   const total = booking.schedules.length;
 //                   const pendingCount = booking.schedules.filter(s => stripNum(s.BalanceToRecive) > 0).length;
 
-//                   // ✅ FIXED: Use new function to get next follow-up from ALL schedules including previousPayments
 //                   const followUpData = getNextFollowUpForBooking(booking);
 //                   const fuInfo = {
 //                     nextDate: followUpData.nextDate,
@@ -893,19 +823,39 @@
 //               )}
 //             </div>
 
-//             {/* Financial Summary */}
+//             {/* ✅ UPDATED: Financial Summary with new calculations */}
 //             {(() => {
 //               const totalScheduled = selectedBooking.schedules.reduce((s, sch) => s + stripNum(sch.Amount), 0);
-//               const totalReceived = selectedBooking.schedules.reduce((s, sch) => {
-//                 const hasPrev = sch.previousPayments?.length > 0;
-//                 const bal = stripNum(sch.BalanceToRecive);
-//                 const rec = hasPrev
-//                   ? sch.previousPayments.reduce((a, p) => a + getPreviousAmount(p), 0)
-//                   : stripNum(sch.Amount) - bal;
-//                 return s + Math.max(0, rec);
+//               const bookingAmt = stripNum(selectedBooking.bookingAmount);
+              
+//               // ✅ Total Received = Booking Amount + All Previous Payments
+//               const paymentsReceived = selectedBooking.schedules.reduce((s, sch) => {
+//                 if (sch.previousPayments?.length > 0) {
+//                   return s + sch.previousPayments.reduce((a, p) => a + getPreviousAmount(p), 0);
+//                 }
+//                 return s;
 //               }, 0);
-//               const totalDue = Math.max(0, totalScheduled - totalReceived);
-//               const pct = totalScheduled > 0 ? Math.round((totalReceived / totalScheduled) * 100) : 0;
+//               const totalReceived = bookingAmt + paymentsReceived;
+
+//               // ✅ Overdue Due = Sum of BalanceToReceive for schedules where Planned < Today
+//               const today = new Date();
+//               today.setHours(0, 0, 0, 0);
+              
+//               const overdueDue = selectedBooking.schedules.reduce((s, sch) => {
+//                 const plannedDate = parseToDate(sch.Planned);
+//                 // Only include if planned date exists and is before today (overdue)
+//                 if (plannedDate && plannedDate < today) {
+//                   const balance = stripNum(sch.BalanceToRecive);
+//                   return s + Math.max(0, balance);
+//                 }
+//                 return s;
+//               }, 0);
+
+//               // Total remaining balance (all schedules)
+//               const totalBalance = selectedBooking.schedules.reduce((s, sch) => s + Math.max(0, stripNum(sch.BalanceToRecive)), 0);
+
+//               const pct = totalScheduled > 0 ? Math.round((totalReceived / (totalScheduled + bookingAmt)) * 100) : 0;
+              
 //               return (
 //                 <div className="mx-5 mb-0 mt-1 rounded-xl border border-slate-200 overflow-hidden shadow-sm">
 //                   <div className="bg-slate-700 px-5 py-2.5 flex items-center gap-2">
@@ -913,14 +863,14 @@
 //                     <span className="text-xs font-bold text-white uppercase tracking-wide">Payment Summary</span>
 //                     <span className="ml-auto text-xs text-slate-300">{pct}% collected</span>
 //                   </div>
-//                   <div className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-slate-100 bg-white">
+//                   <div className="grid grid-cols-2 sm:grid-cols-6 divide-x divide-slate-100 bg-white">
 //                     <div className="px-4 py-3">
 //                       <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Agreement Value</p>
 //                       <p className="font-bold text-slate-800 text-sm">{formatCurrencyShort(selectedBooking.agreementValue)}</p>
 //                     </div>
 //                     <div className="px-4 py-3">
 //                       <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Booking Amount</p>
-//                       <p className="font-bold text-slate-800 text-sm">{formatCurrencyShort(selectedBooking.bookingAmount)}</p>
+//                       <p className="font-bold text-slate-800 text-sm">{formatCurrencyShort(bookingAmt)}</p>
 //                     </div>
 //                     <div className="px-4 py-3">
 //                       <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Total Scheduled</p>
@@ -929,14 +879,21 @@
 //                     <div className="px-4 py-3 bg-emerald-50">
 //                       <p className="text-xs text-emerald-600 font-medium uppercase tracking-wide mb-1">Total Received</p>
 //                       <p className="font-black text-emerald-700 text-base">{formatCurrencyShort(totalReceived)}</p>
+//                       <p className="text-[10px] text-emerald-500 mt-0.5">Booking + Payments</p>
 //                     </div>
 //                     <div className="px-4 py-3 bg-red-50">
-//                       <p className="text-xs text-red-500 font-medium uppercase tracking-wide mb-1">Total balance</p>
-//                       <p className="font-black text-red-700 text-base">{formatCurrencyShort(totalDue)}</p>
+//                       <p className="text-xs text-red-500 font-medium uppercase tracking-wide mb-1">Overdue Due</p>
+//                       <p className="font-black text-red-700 text-base">{formatCurrencyShort(overdueDue)}</p>
+//                       <p className="text-[10px] text-red-400 mt-0.5">Past planned dates</p>
+//                     </div>
+//                     <div className="px-4 py-3 bg-amber-50">
+//                       <p className="text-xs text-amber-600 font-medium uppercase tracking-wide mb-1">Total Balance</p>
+//                       <p className="font-black text-amber-700 text-base">{formatCurrencyShort(totalBalance)}</p>
+//                       <p className="text-[10px] text-amber-500 mt-0.5">All pending</p>
 //                     </div>
 //                   </div>
 //                   <div className="h-2 bg-slate-100">
-//                     <div className="h-2 bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+//                     <div className="h-2 bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, pct)}%` }} />
 //                   </div>
 //                 </div>
 //               );
@@ -953,11 +910,12 @@
 //                 const balance = stripNum(sch.BalanceToRecive);
 //                 const hasPrev = sch.previousPayments?.length > 0;
 //                 const hasFU = sch.followUpHistory?.length > 0;
-//                 const totalReceived = hasPrev
+//                 const totalReceivedSch = hasPrev
 //                   ? sch.previousPayments.reduce((s, p) => s + getPreviousAmount(p), 0)
 //                   : stripNum(sch.Amount) - balance;
-//                 const dynamicBalance = Math.max(0, stripNum(sch.Amount) - totalReceived);
+//                 const dynamicBalance = Math.max(0, stripNum(sch.Amount) - totalReceivedSch);
 //                 const isComplete = dynamicBalance === 0;
+//                 const isScheduleOverdue = isOverdue(sch.Planned) && !isComplete;
 
 //                 const sortedFU = hasFU
 //                   ? [...sch.followUpHistory].sort((a, b) =>
@@ -967,17 +925,20 @@
 //                 const fuInfo = getLatestFollowUpInfo(sch);
 
 //                 return (
-//                   <div key={i} className={`rounded-xl border-2 overflow-hidden shadow-sm ${isComplete ? 'border-emerald-200' : 'border-slate-200'}`}>
-//                     <div className={`px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 ${isComplete ? 'bg-emerald-50' : 'bg-slate-50'} border-b border-slate-200`}>
+//                   <div key={i} className={`rounded-xl border-2 overflow-hidden shadow-sm ${isComplete ? 'border-emerald-200' : isScheduleOverdue ? 'border-red-300' : 'border-slate-200'}`}>
+//                     <div className={`px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 ${isComplete ? 'bg-emerald-50' : isScheduleOverdue ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-200`}>
 //                       <div className="flex flex-wrap items-center gap-3 text-sm">
 //                         <span className="font-bold text-slate-800">Schedule #{i + 1}</span>
 //                         <span className="text-slate-400">|</span>
-//                         <span className="text-slate-600">Planned: <strong className="text-slate-800">{formatDate(sch.Planned, true)}</strong></span>
+//                         <span className={`text-slate-600 ${isScheduleOverdue ? 'text-red-600' : ''}`}>
+//                           Planned: <strong className={isScheduleOverdue ? 'text-red-700' : 'text-slate-800'}>{formatDate(sch.Planned, true)}</strong>
+//                           {isScheduleOverdue && <span className="ml-1 text-red-600 text-xs">(Overdue!)</span>}
+//                         </span>
 //                         <span className="text-slate-400">|</span>
 //                         <span className="font-bold text-blue-700">{formatCurrencyShort(sch.Amount || 0)}</span>
 //                         {isComplete
 //                           ? <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold bg-emerald-100 px-2 py-0.5 rounded-full"><CheckCircle2 size={12} /> Fully Received</span>
-//                           : <span className="text-xs text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full">Balance: {formatCurrencyShort(dynamicBalance)}</span>
+//                           : <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isScheduleOverdue ? 'bg-red-100 text-red-700' : 'bg-red-50 text-red-600'}`}>Balance: {formatCurrencyShort(dynamicBalance)}</span>
 //                         }
 //                         {(sch.FollowUp || '').trim().toUpperCase() === 'Y' && (
 //                           <span className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold">
@@ -993,7 +954,7 @@
 
 //                     <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white border-b border-slate-100 text-xs">
 //                       <div><p className="text-slate-400 mb-0.5">Payment ID</p><p className="font-mono font-semibold text-slate-700">{sch.paymentId || '—'}</p></div>
-//                       <div><p className="text-slate-400 mb-0.5">Total Received</p><p className="font-bold text-emerald-700">{totalReceived > 0 ? formatCurrencyShort(totalReceived) : '—'}</p></div>
+//                       <div><p className="text-slate-400 mb-0.5">Total Received</p><p className="font-bold text-emerald-700">{totalReceivedSch > 0 ? formatCurrencyShort(totalReceivedSch) : '—'}</p></div>
 //                       <div><p className="text-slate-400 mb-0.5">Next Follow-up</p><p className="font-bold text-purple-700">{fuInfo.nextDate}</p></div>
 //                       <div><p className="text-slate-400 mb-0.5">Total Follow-ups Done</p><p className="font-bold text-slate-700">{hasFU ? sortedFU.length : '0'}</p></div>
 //                     </div>
@@ -1364,10 +1325,7 @@
 //   );
 // };
 
-// export default SchedulePayment
-
-
-
+// export default SchedulePayment;
 
 
 
@@ -1583,7 +1541,6 @@ const SchedulePayment = () => {
     let count = '—';
 
     for (const schedule of booking.schedules) {
-      // Check previousPayments FIRST
       if (schedule.previousPayments?.length > 0) {
         const sortedPayments = [...schedule.previousPayments].sort((a, b) => {
           const dateA = parseToDate(a.previousReceviedAmountDate)?.getTime() || new Date(a.timestamp || 0).getTime();
@@ -1609,7 +1566,6 @@ const SchedulePayment = () => {
 
       if (nextDate !== '—') break;
 
-      // Check followUpHistory
       if (schedule.followUpHistory?.length > 0) {
         const sorted = [...schedule.followUpHistory].sort((a, b) =>
           new Date(b.timestamp || b.dateOfFollowup || 0) - new Date(a.timestamp || a.dateOfFollowup || 0)
@@ -1629,7 +1585,6 @@ const SchedulePayment = () => {
 
       if (nextDate !== '—') break;
 
-      // Check direct schedule fields
       const fieldsToCheck = ['NextDate', 'nextDate', 'nextDateOfFollowup', 'next_date', 'nextFollowupDate'];
       for (const field of fieldsToCheck) {
         if (schedule[field] && schedule[field] !== '—' && schedule[field] !== '-' && schedule[field] !== '' &&
@@ -2041,8 +1996,7 @@ const SchedulePayment = () => {
                       <td className="px-4 py-3.5 text-slate-400 text-xs font-medium whitespace-nowrap">{rowNum}</td>
                       <td className="px-4 py-3.5 text-xs whitespace-nowrap">
                         {earliestPlanned ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md font-semibold ${plannedOverdue && status !== 'completed' ? 'bg-orange-100 text-orange-700' : 'text-slate-600'
-                            }`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md font-semibold ${plannedOverdue && status !== 'completed' ? 'bg-orange-100 text-orange-700' : 'text-slate-600'}`}>
                             {plannedOverdue && status !== 'completed' && <span title="Overdue">!</span>}
                             {earliestPlanned}
                           </span>
@@ -2074,14 +2028,12 @@ const SchedulePayment = () => {
                       </td>
                       <td className="px-4 py-3.5 text-xs whitespace-nowrap font-medium">
                         {fuInfo.nextDate && fuInfo.nextDate !== '—' ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md font-semibold ${nextFuOverdue ? 'bg-red-100 text-red-700' : 'text-purple-700 bg-purple-50'
-                            }`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md font-semibold ${nextFuOverdue ? 'bg-red-100 text-red-700' : 'text-purple-700 bg-purple-50'}`}>
                             {nextFuOverdue && <span title="Overdue">⚠</span>}
                             {fuInfo.nextDate}
                           </span>
                         ) : <span className="text-slate-400">—</span>}
                       </td>
-
                       <td className="px-4 py-3.5 text-center whitespace-nowrap"><StatusChip status={status} /></td>
                       <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
@@ -2155,7 +2107,7 @@ const SchedulePayment = () => {
         </div>
       </div>
 
-      {/* Detail Modal */}
+      {/* ─── Detail Modal ─── */}
       {showDetailModal && selectedBooking && (
         <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-start justify-center p-4 pt-8 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl mb-10">
@@ -2197,12 +2149,11 @@ const SchedulePayment = () => {
               )}
             </div>
 
-            {/* ✅ UPDATED: Financial Summary with new calculations */}
+            {/* Financial Summary */}
             {(() => {
               const totalScheduled = selectedBooking.schedules.reduce((s, sch) => s + stripNum(sch.Amount), 0);
               const bookingAmt = stripNum(selectedBooking.bookingAmount);
-              
-              // ✅ Total Received = Booking Amount + All Previous Payments
+
               const paymentsReceived = selectedBooking.schedules.reduce((s, sch) => {
                 if (sch.previousPayments?.length > 0) {
                   return s + sch.previousPayments.reduce((a, p) => a + getPreviousAmount(p), 0);
@@ -2211,13 +2162,11 @@ const SchedulePayment = () => {
               }, 0);
               const totalReceived = bookingAmt + paymentsReceived;
 
-              // ✅ Overdue Due = Sum of BalanceToReceive for schedules where Planned < Today
               const today = new Date();
               today.setHours(0, 0, 0, 0);
-              
+
               const overdueDue = selectedBooking.schedules.reduce((s, sch) => {
                 const plannedDate = parseToDate(sch.Planned);
-                // Only include if planned date exists and is before today (overdue)
                 if (plannedDate && plannedDate < today) {
                   const balance = stripNum(sch.BalanceToRecive);
                   return s + Math.max(0, balance);
@@ -2225,13 +2174,11 @@ const SchedulePayment = () => {
                 return s;
               }, 0);
 
-              // Total remaining balance (all schedules)
               const totalBalance = selectedBooking.schedules.reduce((s, sch) => s + Math.max(0, stripNum(sch.BalanceToRecive)), 0);
-
               const pct = totalScheduled > 0 ? Math.round((totalReceived / (totalScheduled + bookingAmt)) * 100) : 0;
-              
+
               return (
-                <div className="mx-5 mb-0 mt-1 rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="mx-5 mb-0 mt-4 rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                   <div className="bg-slate-700 px-5 py-2.5 flex items-center gap-2">
                     <IndianRupee size={14} className="text-slate-300" />
                     <span className="text-xs font-bold text-white uppercase tracking-wide">Payment Summary</span>
@@ -2300,6 +2247,8 @@ const SchedulePayment = () => {
 
                 return (
                   <div key={i} className={`rounded-xl border-2 overflow-hidden shadow-sm ${isComplete ? 'border-emerald-200' : isScheduleOverdue ? 'border-red-300' : 'border-slate-200'}`}>
+
+                    {/* Schedule Header */}
                     <div className={`px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 ${isComplete ? 'bg-emerald-50' : isScheduleOverdue ? 'bg-red-50' : 'bg-slate-50'} border-b border-slate-200`}>
                       <div className="flex flex-wrap items-center gap-3 text-sm">
                         <span className="font-bold text-slate-800">Schedule #{i + 1}</span>
@@ -2309,7 +2258,9 @@ const SchedulePayment = () => {
                           {isScheduleOverdue && <span className="ml-1 text-red-600 text-xs">(Overdue!)</span>}
                         </span>
                         <span className="text-slate-400">|</span>
-                        <span className="font-bold text-blue-700">{formatCurrencyShort(sch.Amount || 0)}</span>
+                        <span className="text-slate-500 text-xs font-medium">Amount:</span>
+                        <span className="font-bold text-blue-700">{formatCurrencyShort(stripNum(sch.Amount))}</span>
+                        <span className="text-slate-400">|</span>
                         {isComplete
                           ? <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold bg-emerald-100 px-2 py-0.5 rounded-full"><CheckCircle2 size={12} /> Fully Received</span>
                           : <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isScheduleOverdue ? 'bg-red-100 text-red-700' : 'bg-red-50 text-red-600'}`}>Balance: {formatCurrencyShort(dynamicBalance)}</span>
@@ -2320,12 +2271,19 @@ const SchedulePayment = () => {
                           </span>
                         )}
                       </div>
-                      <button onClick={e => openActionModal(sch, e)}
-                        className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0">
-                        <Edit3 size={12} /> Take Action
-                      </button>
+                      {isComplete ? (
+                        <span className="px-4 py-1.5 bg-emerald-100 text-emerald-600 text-xs font-bold rounded-lg flex items-center gap-1.5 flex-shrink-0 cursor-not-allowed select-none">
+                          <CheckCircle2 size={12} /> Fully Paid
+                        </span>
+                      ) : (
+                        <button onClick={e => openActionModal(sch, e)}
+                          className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 flex-shrink-0">
+                          <Edit3 size={12} /> Take Action
+                        </button>
+                      )}
                     </div>
 
+                    {/* Schedule Meta */}
                     <div className="px-5 py-3 grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white border-b border-slate-100 text-xs">
                       <div><p className="text-slate-400 mb-0.5">Payment ID</p><p className="font-mono font-semibold text-slate-700">{sch.paymentId || '—'}</p></div>
                       <div><p className="text-slate-400 mb-0.5">Total Received</p><p className="font-bold text-emerald-700">{totalReceivedSch > 0 ? formatCurrencyShort(totalReceivedSch) : '—'}</p></div>
@@ -2333,53 +2291,107 @@ const SchedulePayment = () => {
                       <div><p className="text-slate-400 mb-0.5">Total Follow-ups Done</p><p className="font-bold text-slate-700">{hasFU ? sortedFU.length : '0'}</p></div>
                     </div>
 
-                    {hasPrev && (
-                      <div className="border-b border-slate-100">
-                        <div className="px-5 py-2.5 bg-blue-700 flex items-center gap-2">
-                          <DollarSign size={13} className="text-blue-200" />
-                          <span className="text-xs font-bold text-white uppercase tracking-wide">
-                            Payment Received History — {sch.previousPayments.length} {sch.previousPayments.length === 1 ? 'Entry' : 'Entries'}
-                          </span>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
-                                <th className="px-4 py-2.5 text-left font-semibold w-10">#</th>
-                                <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">Date Received</th>
-                                <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">Amount Received</th>
-                                <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">Next Follow-up Date</th>
-                                <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">Remark</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                              {sch.previousPayments.map((pay, pi) => {
-                                const amt = getPreviousAmount(pay);
-                                return (
-                                  <tr key={pi} className="hover:bg-blue-50/30 transition-colors">
-                                    <td className="px-4 py-2.5 text-slate-400 font-medium whitespace-nowrap">{pi + 1}</td>
-                                    <td className="px-4 py-2.5 font-semibold text-slate-700 whitespace-nowrap">{formatDate(pay.previousReceviedAmountDate, true)}</td>
-                                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                                      <span className={`font-bold ${amt > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{formatCurrencyShort(amt)}</span>
-                                    </td>
-                                    <td className="px-4 py-2.5 text-purple-700 font-medium whitespace-nowrap">{formatDate(pay.NextDate, true)}</td>
-                                    <td className="px-4 py-2.5 text-slate-500 max-w-xs">{pay.previousRemark || '—'}</td>
-                                  </tr>
-                                );
-                              })}
-                              <tr className="bg-blue-50 border-t-2 border-blue-200">
-                                <td colSpan={2} className="px-4 py-2.5 font-bold text-blue-800 text-xs">Total Received (This Schedule)</td>
-                                <td className="px-4 py-2.5 text-right font-black text-emerald-700 whitespace-nowrap">
-                                  {formatCurrencyShort(sch.previousPayments.reduce((s, p) => s + getPreviousAmount(p), 0))}
-                                </td>
-                                <td colSpan={2}></td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
+                    {/* ✅ Payment Received History — hamesha dikhegi (Done + Partial dono) */}
+                    <div className="border-b border-slate-100">
+                      <div className="px-5 py-2.5 bg-blue-700 flex items-center gap-2">
+                        <DollarSign size={13} className="text-blue-200" />
+                        <span className="text-xs font-bold text-white uppercase tracking-wide">
+                          Payment Received History — {sch.previousPayments.length} {sch.previousPayments.length === 1 ? 'Entry' : 'Entries'}
+                        </span>
                       </div>
-                    )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-blue-50 text-blue-900 border-b border-blue-100">
+                              <th className="px-4 py-2.5 text-left font-semibold w-10">#</th>
+                              <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">Date Received</th>
+                              <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">Gross Amount</th>
+                              <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">CGST</th>
+                              <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">SGST</th>
+                              <th className="px-4 py-2.5 text-right font-semibold whitespace-nowrap">Net Amount</th>
+                              <th className="px-4 py-2.5 text-center font-semibold whitespace-nowrap">Status</th>
+                              <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">Next Follow-up</th>
+                              <th className="px-4 py-2.5 text-left font-semibold whitespace-nowrap">Remark</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 bg-white">
+                            {!hasPrev ? (
+                              <tr>
+                                <td colSpan={9} className="px-5 py-4 text-center text-xs text-slate-400">
+                                  No payment received yet for this schedule.
+                                </td>
+                              </tr>
+                            ) : (
+                              <>
+                                {sch.previousPayments.map((pay, pi) => {
+                                  const netAmt = getPreviousAmount(pay);
+                                  const grossAmt = parseFloat(pay.grossAmount) || 0;
+                                  const cgst = parseFloat(pay.cgst) || 0;
+                                  const sgst = parseFloat(pay.sgst) || 0;
+                                  const payStatus = (pay.status || '').toLowerCase();
+                                  const isDoneStatus = ['done', 'completed', 'paid', 'complete'].includes(payStatus);
+                                  return (
+                                    <tr key={pi} className="hover:bg-blue-50/30 transition-colors">
+                                      <td className="px-4 py-2.5 text-slate-400 font-medium whitespace-nowrap">{pi + 1}</td>
+                                      <td className="px-4 py-2.5 font-semibold text-slate-700 whitespace-nowrap">
+                                        {formatDate(pay.previousReceviedAmountDate, true)}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                        <span className={`font-bold ${grossAmt > 0 ? 'text-slate-700' : 'text-slate-400'}`}>
+                                          {formatCurrencyShort(grossAmt)}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                        <span className="text-orange-600 font-semibold">{formatCurrencyShort(cgst)}</span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                        <span className="text-purple-600 font-semibold">{formatCurrencyShort(sgst)}</span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                        <span className={`font-bold ${netAmt > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                          {formatCurrencyShort(netAmt)}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-center whitespace-nowrap">
+                                        <span className={`px-2.5 py-1 rounded-full font-semibold text-[11px] whitespace-nowrap ${
+                                          isDoneStatus ? 'bg-emerald-100 text-emerald-700'
+                                          : payStatus === 'partial' ? 'bg-amber-100 text-amber-700'
+                                          : 'bg-slate-100 text-slate-600'
+                                        }`}>
+                                          {isDoneStatus ? '✓ Done' : payStatus === 'partial' ? '◑ Partial' : pay.status || '—'}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-purple-700 font-medium whitespace-nowrap">
+                                        {formatDate(pay.NextDate, true)}
+                                      </td>
+                                      <td className="px-4 py-2.5 text-slate-500 max-w-xs">{pay.previousRemark || '—'}</td>
+                                    </tr>
+                                  );
+                                })}
+                                <tr className="bg-blue-50 border-t-2 border-blue-200">
+                                  <td colSpan={2} className="px-4 py-2.5 font-bold text-blue-800 text-xs">Total (This Schedule)</td>
+                                  <td className="px-4 py-2.5 text-right font-bold text-slate-700 whitespace-nowrap">
+                                    {formatCurrencyShort(sch.previousPayments.reduce((s, p) => s + (parseFloat(p.grossAmount) || 0), 0))}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right font-bold text-orange-600 whitespace-nowrap">
+                                    {formatCurrencyShort(sch.previousPayments.reduce((s, p) => s + (parseFloat(p.cgst) || 0), 0))}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right font-bold text-purple-600 whitespace-nowrap">
+                                    {formatCurrencyShort(sch.previousPayments.reduce((s, p) => s + (parseFloat(p.sgst) || 0), 0))}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right font-black text-emerald-700 whitespace-nowrap">
+                                    {formatCurrencyShort(sch.previousPayments.reduce((s, p) => s + getPreviousAmount(p), 0))}
+                                  </td>
+                                  <td colSpan={3}></td>
+                                </tr>
+                              </>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
 
+                    {/* Follow-up History */}
                     {hasFU ? (
                       <div>
                         <div className="px-5 py-2.5 bg-purple-700 flex items-center gap-2">
@@ -2428,11 +2440,12 @@ const SchedulePayment = () => {
                                     </td>
                                     <td className="px-4 py-3 text-slate-600 align-top leading-relaxed max-w-sm">{fu.remark || '—'}</td>
                                     <td className="px-4 py-3 align-top whitespace-nowrap">
-                                      <span className={`px-2.5 py-1 rounded-full font-semibold text-[11px] whitespace-nowrap ${fuStatus === 'done' || fuStatus === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                      <span className={`px-2.5 py-1 rounded-full font-semibold text-[11px] whitespace-nowrap ${
+                                        fuStatus === 'done' || fuStatus === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                                         fuStatus === 'pending' ? 'bg-orange-100 text-orange-700' :
-                                          fuStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
-                                            'bg-slate-100 text-slate-600'
-                                        }`}>{fu.status || '—'}</span>
+                                        fuStatus === 'partial' ? 'bg-amber-100 text-amber-700' :
+                                        'bg-slate-100 text-slate-600'
+                                      }`}>{fu.status || '—'}</span>
                                     </td>
                                   </tr>
                                 );
@@ -2455,7 +2468,7 @@ const SchedulePayment = () => {
         </div>
       )}
 
-      {/* Action Modal with GST Calculation */}
+      {/* ─── Action Modal ─── */}
       {showActionModal && selectedPayment && (
         <div className="fixed inset-0 bg-black/55 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -2475,7 +2488,7 @@ const SchedulePayment = () => {
             </div>
 
             <div className="p-5 space-y-5">
-              {/* Summary */}
+              {/* Schedule Summary */}
               {(() => {
                 const schAmount = stripNum(selectedPayment.Amount);
                 const hasPrev = selectedPayment.previousPayments?.length > 0;
@@ -2532,7 +2545,7 @@ const SchedulePayment = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* STATUS DROPDOWN */}
+                {/* Status */}
                 <FormField label="Status" required>
                   <select
                     name="status"
@@ -2546,12 +2559,10 @@ const SchedulePayment = () => {
                     {!isCRM && <option value="partial">Partial Payment</option>}
                     <option value="pending">Pending</option>
                   </select>
-                  {isCRM && (
-                    <p className="text-xs text-orange-600 mt-1">CRM users can only mark as Pending</p>
-                  )}
+                  {isCRM && <p className="text-xs text-orange-600 mt-1">CRM users can only mark as Pending</p>}
                 </FormField>
 
-                {/* Done/Partial ke fields */}
+                {/* Done / Partial fields */}
                 {!isCRM && ['Done', 'partial'].includes(actionForm.status) && (
                   <>
                     <FormField label="Date of Receiving" required>
@@ -2569,17 +2580,12 @@ const SchedulePayment = () => {
                       </div>
                     </FormField>
 
-                    {/* GST Dropdown */}
                     <FormField label="GST %" required>
                       <div className="relative">
                         <Percent className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <select
-                          name="gstPercent"
-                          value={actionForm.gstPercent}
-                          onChange={handleFormChange}
+                        <select name="gstPercent" value={actionForm.gstPercent} onChange={handleFormChange}
                           disabled={isUpdating}
-                          className="w-full pl-9 pr-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-400 focus:outline-none text-sm"
-                        >
+                          className="w-full pl-9 pr-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-400 focus:outline-none text-sm">
                           <option value="0">0% (No GST)</option>
                           <option value="5">5%</option>
                           <option value="12">12%</option>
@@ -2588,7 +2594,7 @@ const SchedulePayment = () => {
                       </div>
                     </FormField>
 
-                    {/* GST Calculation Display */}
+                    {/* GST Breakdown */}
                     {parseFloat(actionForm.amountReceived) > 0 && (
                       <div className="md:col-span-2">
                         <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 overflow-hidden">
@@ -2658,7 +2664,7 @@ const SchedulePayment = () => {
                   </>
                 )}
 
-                {/* Pending/Partial ke fields */}
+                {/* Pending / Partial follow-up fields */}
                 {(isCRM || ['pending', 'partial'].includes(actionForm.status)) && (
                   <>
                     <FormField label="Next Follow-up Date" required>
@@ -2671,8 +2677,8 @@ const SchedulePayment = () => {
                         placeholder={isCRM
                           ? "Follow-up notes, customer response, reason for pending..."
                           : actionForm.status === 'partial'
-                            ? "Reason for partial payment, balance details, what was discussed..."
-                            : "Reason for pending, follow-up discussion notes..."
+                          ? "Reason for partial payment, balance details, what was discussed..."
+                          : "Reason for pending, follow-up discussion notes..."
                         }
                         disabled={isUpdating}
                         className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-400 focus:outline-none text-sm resize-none" />
