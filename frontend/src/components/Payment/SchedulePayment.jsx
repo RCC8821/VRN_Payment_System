@@ -3171,9 +3171,22 @@ const SchedulePayment = () => {
       });
     }
 
-    if (isCRM) {
-      result = result.filter(b => getBookingStatus(b) === 'pending');
-    }
+//    if (isCRM) {
+//   result = result.filter(b => {
+//     // Koi bhi schedule jiska planned date overdue ho
+//     const hasOverduePlanned = b.schedules.some(s => 
+//       stripNum(s.BalanceToRecive) > 0 && isOverdue(s.Planned)
+//     );
+
+//     // Next follow-up date overdue ho
+//     const fuData = getNextFollowUpForBooking(b);
+//     const hasOverdueFU = fuData.nextDate && fuData.nextDate !== '—' 
+//       ? isOverdue(fuData.nextDate) 
+//       : false;
+
+//     return hasOverduePlanned || hasOverdueFU;
+//   });
+// }
 
     return result;
   }, [groupedBookings, searchQuery, filterProject, fromDate, toDate, isCRM]);
@@ -3676,8 +3689,13 @@ const SchedulePayment = () => {
                 return s;
               }, 0);
 
-              const totalBalance = selectedBooking.schedules.reduce((s, sch) => s + Math.max(0, stripNum(sch.BalanceToRecive)), 0);
-              const pct = totalScheduled > 0 ? Math.round((totalReceived / (totalScheduled + bookingAmt)) * 100) : 0;
+              // const totalBalance = selectedBooking.schedules.reduce((s, sch) => s + Math.max(0, stripNum(sch.BalanceToRecive)), 0);
+              // const pct = totalScheduled > 0 ? Math.round((totalReceived / (totalScheduled + bookingAmt)) * 100) : 0;
+
+
+              const agreementVal = stripNum(selectedBooking.agreementValue);
+const totalBalance = Math.max(0, agreementVal - totalReceived);
+const pct = agreementVal > 0 ? Math.round((totalReceived / agreementVal) * 100) : 0;
 
               return (
                 <div className="mx-5 mb-0 mt-4 rounded-xl border border-slate-200 overflow-hidden shadow-sm">

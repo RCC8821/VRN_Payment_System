@@ -731,18 +731,7 @@ router.get('/Schedule-Payment', async (req, res) => {
 
     console.log(`Bookings sheet se ${bookingAmountMap.size} valid records loaded`);
 
-    // 3. Fetch Payment sheet → A se AB tak (FULL range)
-    // Column mapping:
-    //   A=0   bookingId
-    //   B=1   paymentId
-    //   Q=16  status  (done / partial)
-    //   V=21  lastDateOfReceiving
-    //   W=22  netAmount
-    //   X=23  nextDate
-    //   Y=24  remark
-    //   Z=25  cgst
-    //   AA=26 sgst
-    //   AB=27 grossAmount (amountReceived)
+  
     const paymentsResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Payment!A2:AB',  // ✅ AB tak — Done + Partial dono ka full data aayega
@@ -971,7 +960,7 @@ router.post('/update-Schedule-payment', async (req, res) => {
       const row = fmsRows[fmsRowIndex];
 
       // W column mein NET AMOUNT ka total hoga
-      const prevReceived = parseFloat(row[22] || '0') || 0;  // W - Previous Net Amount
+     const prevReceived = parseFloat(row[23] || '0') || 0;  // W - Previous Net Amount
       const newNetAmount = parseFloat(safeNetAmount) || 0;
       const totalReceived = prevReceived + newNetAmount;
 
