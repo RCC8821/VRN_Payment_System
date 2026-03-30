@@ -13,6 +13,14 @@ import Dashboard from "./Pages/Dashboard";
 import Summary from "./components/paymentSummary/Summary";
 import ActualBookingAmount from "./components/Payment/ActualBookingAmount";
 import SchedulePayment from "./components/Payment/SchedulePayment";
+
+///////
+
+import Approvel1 from "./components/OfficeExpenses/Approvel1";
+import BillEntry from "./components/OfficeExpenses/BillEntry";
+import ExpensesPayemnt from "./components/OfficeExpenses/ExpensesPayemnt";
+
+
 // import Leads from "./components/LeadsSummary/Leads";
 
 const ProtectedRoute = ({ children }) => {
@@ -39,7 +47,10 @@ function App() {
           <Route path="summary" element={<Summary />} />
           <Route path="ActualBooking" element={<ActualBookingAmount />} />
           <Route path="SchedulePayment" element={<SchedulePayment />} />
-
+///////////////////
+<Route path="Approvel1" element={<Approvel1/>}/>
+<Route path="BillEntry" element={<BillEntry/>}/>
+<Route path="ExpensesPayment" element={<ExpensesPayemnt/>}/>
           {/* <Route path="Leads" element={<Leads />} /> */}
         </Route>
 

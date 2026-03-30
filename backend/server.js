@@ -10,6 +10,9 @@ const Login = require('./Router/auth')
 const Booking=require('./controllers/Booking/BookingAmount')
 const SchedulePayment = require('./controllers/Payment/SchedulePayment')
 const leadsSummary= require('./controllers/Leads/LeadsSummary')
+const officeExpenses = require('./controllers/OfficeExpenses/Approvel1')
+const BillEntry= require('./controllers/OfficeExpenses/BillEntry')
+const paymentOfficeExpenses= require('./controllers/OfficeExpenses/Payment')
 
 const app = express();
 // 1. CORS (Pehle daalo)
@@ -40,6 +43,10 @@ validateEnv();
 
 
 app.use('/api',Login)
+
+app.use('/api/office',officeExpenses)
+app.use('/api/office',BillEntry)
+app.use('/api/office',paymentOfficeExpenses)
 
 app.use('/api/Booking',Booking)
 
