@@ -9,11 +9,13 @@ import {
 import { useSelector } from "react-redux";
 import Login from "./Pages/Login";
 import Dashboard from "./Pages/Dashboard";
-
 import Summary from "./components/paymentSummary/Summary";
-import ActualBookingAmount from "./components/Payment/ActualBookingAmount";
-import SchedulePayment from "./components/Payment/SchedulePayment";
 
+import SchedulePayment from "./components/Payment/SchedulePayment";
+import Reconciliation from "./components/Payment/Reconciliation";
+import Actual_Payment_in from "./components/Payment/Actual_Payment_in";
+import Transfer_bank_To_bank from "./components/Payment/Transfer_bank_To_bank";
+import Form from "./components/Payment/Form";
 ///////
 
 import Approvel1 from "./components/OfficeExpenses/Approvel1";
@@ -45,8 +47,13 @@ function App() {
           }
         >
           <Route path="summary" element={<Summary />} />
-          <Route path="ActualBooking" element={<ActualBookingAmount />} />
+        
           <Route path="SchedulePayment" element={<SchedulePayment />} />
+         <Route path="reconciliation" element={<Reconciliation />} />
+          <Route path="actual-payment-in" element={<Actual_Payment_in />} />
+          <Route path="transfer-bank-to-bank" element={<Transfer_bank_To_bank />} />
+          <Route path="form" element={<Form />} />
+          
 ///////////////////
 <Route path="Approvel1" element={<Approvel1/>}/>
 <Route path="BillEntry" element={<BillEntry/>}/>
