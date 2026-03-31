@@ -1,217 +1,182 @@
+
 const express = require('express');
+const { sheets, RECONCILITION_ID } = require('../../config/googleSheet');
 const router = express.Router();
-const { sheets, spreadsheetId } = require('../../config/googleSheet');
 
-
-// ======================================================
-// 1. GET - Pending Approvals Fetch
-// URL: /api/fms/pending-approvals
-// ======================================================
-router.get('/Get-Reconcilition', async (req, res) => {
+router.get('/payment-Reconsilation', async (req, res) => {
   try {
-    if (!spreadsheetId) {
-      return res.status(500).json({
-        success: false,
-        error: 'spreadsheetId is not configured',
-      });
-    }
-
+    // Fetch columns A to L starting from row 7 (A7:L)
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'Out_FMS!A7:M',
+      spreadsheetId : RECONCILITION_ID,
+      range: 'Out_FMS!A8:M',
     });
 
     let rows = response.data.values || [];
 
     if (rows.length === 0) {
-      return res.json({
-        success: true,
-        message: 'No data found',
-        data: [],
-      });
+      return res.json({ success: true, data: [] });
     }
 
-    // Filter pending approval
+  
     const filteredData = rows
-      .filter((row) => row[11] && !row[12])
-      .map((row) => ({
-        UID: (row[0] || '').toString().trim(),
-        Timestap: (row[1] || '').toString().trim(),
-        Contractor_Vendor_Firm_Name: (row[2] || '').toString().trim(),
-        PAID_AMOUNT: (row[3] || '').toString().trim(),
-        BANK_DETAILS: (row[4] || '').toString().trim(),
-        PAYMENT_MODE: (row[5] || '').toString().trim(),
-        PAYMENT_DETAILS: (row[6] || '').toString().trim(),
-        PAYMENT_DATE: (row[7] || '').toString().trim(),
-        EXP_HEAD: (row[8] || '').toString().trim(),
-        PLANNED_2: (row[11] || '').toString().trim(),
-        ACTUAL_2: (row[12] || '').toString().trim(),
+     .filter(row => row[11] && !row[12])
+      .map(row => ({
+        timestamp: (row[0] || '').toString().trim(),
+        uid: (row[1] || '').toString().trim(),
+        contractorName: (row[2] || '').toString().trim(),
+        paidAmount: (row[3] || '').toString().trim(),
+        bankDetails: (row[4] || '').toString().trim(),
+        paymentMode: (row[5] || '').toString().trim(),
+        paymentDetails: (row[6] || '').toString().trim(),
+        paymentDate: (row[7] || '').toString().trim(),
+        ExpHead: (row[8] || '').toString().trim(),
+        planned2: (row[11] || '').toString().trim(),
+        actual2: (row[12] || '').toString().trim(),
       }));
 
-    return res.json({
-      success: true,
-      totalRecords: filteredData.length,
-      data: filteredData,
-    });
+    res.json({ success: true, data: filteredData });
   } catch (error) {
-    console.error('GET Pending Approvals Error:', error.message);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to fetch',
-      details: error.message,
-    });
+    console.error('GET /payment-Reconsilation:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch data' });
   }
 });
 
-
-// ======================================================
-// 2. POST - Update Approval
-// URL: /api/fms/pending-approvals
-// ======================================================
-router.post('/POST-Reconcilition', async (req, res) => {
+router.get('/bank-balance/:bankName', async (req, res) => {
   try {
-    const body = req.body;
-    const { uid, STATUS_2, BANK_CLOSING_BALANCE_2, REMARK_2 } = body;
+    const { bankName } = req.params;
+    console.log('Requested Bank:', bankName);
 
-    console.log('Received update body:', body);
+    // Sheet name ko single quotes mein wrap karo (safe way)
+    const range = `'${bankName}'!F3`;
 
-    if (!uid) {
-      return res.status(400).json({
-        success: false,
-        message: 'UID is required',
-      });
-    }
-
-    if (!spreadsheetId) {
-      return res.status(500).json({
-        success: false,
-        error: 'spreadsheetId is not configured',
-      });
-    }
-
-    const trimmedUid = uid.toString().trim();
-
-    // Find row by UID
-    const findResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'Out_FMS!A7:A',
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId : RECONCILITION_ID,
+      range,
     });
 
-    const values = findResponse.data.values || [];
+    const bankClosingBalance = response.data.values?.[0]?.[0] || 'Not Found';
 
-    const rowIndex = values.findIndex((row) => {
-      if (!row || row.length === 0) return false;
-      const sheetValue = row[0] ? row[0].toString().trim() : '';
-      return sheetValue === trimmedUid;
-    });
+    console.log('Fetched Range:', range);
+    console.log('F3 Value:', bankClosingBalance);
 
-    if (rowIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Row not found with this UID',
-        searchedFor: uid,
-      });
-    }
-
-    const sheetRowNumber = 7 + rowIndex;
-
-    // Batch update
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId,
-      resource: {
-        valueInputOption: 'USER_ENTERED',
-        data: [
-          {
-            range: `Out_FMS!N${sheetRowNumber}`,
-            values: [[STATUS_2 || '']],
-          },
-          {
-            range: `Out_FMS!P${sheetRowNumber}`,
-            values: [[BANK_CLOSING_BALANCE_2 || '']],
-          },
-          {
-            range: `Out_FMS!Q${sheetRowNumber}`,
-            values: [[REMARK_2 || '']],
-          },
-        ],
-      },
-    });
-
-    return res.json({
+    // Hamesha success: true bhejo agar koi error nahi hai
+    res.status(200).json({
       success: true,
-      message: 'Data updated successfully',
+      bankName: bankName,
+      bankClosingBalance: bankClosingBalance.toString().trim(),
     });
   } catch (error) {
-    console.error('POST Update Approval Error:', error.message);
-    return res.status(500).json({
+    console.error('Bank balance API error:', error.message);
+    // Agar error hai tabhi success: false bhejo
+    res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: 'Failed to fetch bank balance',
       error: error.message,
     });
   }
 });
 
 
-// ======================================================
-// 3. GET - Bank Balance Fetch
-// URL: /api/fms/bank-balance?bank=HDFC
-// ======================================================
-router.get('/bank-balance', async (req, res) => {
-  try {
-    const bankName = req.query.bank;
 
-    // Validation
-    if (!bankName) {
+
+
+router.post('/update-reconciliation', async (req, res) => {
+  console.log('Received body:', req.body);
+
+  try {
+    const {
+      paymentDetails,
+      bankDetails,                      // ← नया field
+      bankClosingBalanceAfterPayment,
+      status,
+      remark
+    } = req.body;
+
+    if (!paymentDetails?.trim() || !bankDetails?.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Bank name is required',
+        message: 'Both Payment Details and Bank Details are required'
       });
     }
 
-    if (!spreadsheetId) {
-      return res.status(500).json({
-        success: false,
-        error: 'spreadsheetId is not configured',
-      });
-    }
+    const trimmedPayment = paymentDetails.trim().toLowerCase();
+    const trimmedBank    = bankDetails.trim().toLowerCase();
 
-    console.log('Fetching balance for bank:', bankName);
-
-    // Bank tab se H3 cell fetch karo
+    // Google Sheet से data लाओ
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `'${bankName}'!H3`,
+      spreadsheetId : RECONCILITION_ID,
+      range: 'Out_FMS!A7:Q',   // या जितना ज़रूरी हो
     });
 
-    const balance = response.data.values?.[0]?.[0] || '0';
+    const rows = response.data.values || [];
 
-    console.log('Balance found:', balance);
+    // दोनों conditions match करने वाली row ढूंढो
+    const rowIndex = rows.findIndex(row => {
+      const sheetPayment = (row[6] || '').toString().trim().toLowerCase();  // column G → index 6
+      const sheetBank    = (row[4] || '').toString().trim().toLowerCase();  // column E → index 4 (Bank name वाला column)
 
-    return res.json({
-      success: true,
-      bank: bankName,
-      balance: balance,
+      return sheetPayment === trimmedPayment && sheetBank === trimmedBank;
     });
-  } catch (error) {
-    console.error('Bank Balance Error:', error.message);
 
-    if (
-      error.message.includes('Unable to parse range') ||
-      error.message.includes('not found')
-    ) {
+    if (rowIndex === -1) {
       return res.status(404).json({
         success: false,
-        error: 'Bank sheet not found',
-        details: `Sheet '${req.query.bank}' not found`,
+        message: 'No matching row found with both Payment Details and Bank Details',
+        searchedPayment: trimmedPayment,
+        searchedBank: trimmedBank
       });
     }
 
-    return res.status(500).json({
+    const sheetRowNumber = 7 + rowIndex;  // A7 से शुरू है
+    console.log(`Matched row: ${sheetRowNumber} (0-based index ${rowIndex})`);
+
+    // अब update करो (एक-एक करके safe तरीके से)
+
+    // Column P → Bank Closing Balance After Payment
+    await sheets.spreadsheets.values.update({
+      spreadsheetId : RECONCILITION_ID,
+      range: `Out_FMS!P${sheetRowNumber}`,
+      valueInputOption: 'RAW',
+      resource: { values: [[bankClosingBalanceAfterPayment || '']] }
+    });
+
+    // Column N → Status
+    await sheets.spreadsheets.values.update({
+      spreadsheetId : RECONCILITION_ID,
+      range: `Out_FMS!N${sheetRowNumber}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [[status || '']] }
+    });
+
+    // Column Q → Remark
+    await sheets.spreadsheets.values.update({
+      spreadsheetId : RECONCILITION_ID,
+      range: `Out_FMS!Q${sheetRowNumber}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [[remark || '']] }
+    });
+
+    res.json({
+      success: true,
+      message: `Row ${sheetRowNumber} updated successfully`,
+      row: sheetRowNumber,
+      updatedFields: {
+        P: bankClosingBalanceAfterPayment,
+        N: status,
+        Q: remark
+      }
+    });
+
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Failed to fetch bank balance',
-      details: error.message,
+      message: 'Update failed',
+      error: error.message
     });
   }
 });
+
+
 
 module.exports = router;

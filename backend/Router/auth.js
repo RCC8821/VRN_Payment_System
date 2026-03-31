@@ -9,7 +9,9 @@ const router = express.Router();
 const ALLOWED_USER_TYPES = [
   'ADMIN',
   'CRM',
-  'ACCOUNTS'
+  'ACCOUNTS',
+  'PAYMENT',
+  'VRN'
 ];
 
 // Login Route

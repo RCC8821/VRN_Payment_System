@@ -7,8 +7,15 @@ const { validateEnv } = require('./config/env');
 const cors = require("cors");
 
 const Login = require('./Router/auth')
-const Booking=require('./controllers/Booking/BookingAmount')
+
+///// Payment ///////
 const SchedulePayment = require('./controllers/Payment/SchedulePayment')
+const PaymentReconcilition  = require('./controllers/Payment/Reconcilition')
+const Form = require('./controllers/Payment/Form')
+const Actual_Bank_In= require('./controllers/Payment/Actual_Bank_In')
+const Bank_to_bank_transfer=require('./controllers/Payment/bank_to_bank_Transfer')
+
+
 const leadsSummary= require('./controllers/Leads/LeadsSummary')
 const officeExpenses = require('./controllers/OfficeExpenses/Approvel1')
 const BillEntry= require('./controllers/OfficeExpenses/BillEntry')
@@ -48,11 +55,13 @@ app.use('/api/office',officeExpenses)
 app.use('/api/office',BillEntry)
 app.use('/api/office',paymentOfficeExpenses)
 
-app.use('/api/Booking',Booking)
 
-app.use('/api/payment',SchedulePayment)
-
-app.use('/api',leadsSummary)
+app.use('/api/payment', SchedulePayment)
+app.use('/api/payment',PaymentReconcilition)
+app.use('/api/payment',Form)
+app.use('/api/payment',Actual_Bank_In)
+app.use('/api/payment',Bank_to_bank_transfer)
+app.use('/api', leadsSummary)
 
 
 
