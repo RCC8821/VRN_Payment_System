@@ -515,7 +515,7 @@ const Dashboard = () => {
   const canSeePayment = isAdmin || isCRM || isAccounts || isFinance;
 
   // Office Dropdown → Kon kon dekh sakta hai aur kya-kya items
-  const canSeeOffice = isAdmin  || isAccounts || isFinance;
+  const canSeeOffice = isAdmin  || isAccounts ;
 
   // Individual Menu Items Permissions (Yeh future mein aur flexible banane ke liye best practice hai)
   const canSeeSchedulePayment = isAdmin || isCRM || isAccounts || isFinance;
