@@ -14,6 +14,7 @@
 
 //   const dropdownRef = useRef(null);
 //   const officeDropdownRef = useRef(null);
+
 //   const { token, userType } = useSelector((state) => state.auth);
 //   const dispatch = useDispatch();
 //   const navigate = useNavigate();
@@ -21,17 +22,38 @@
 
 //   const currentUserType = (userType || "").trim().toUpperCase();
 
+//   // === PERMISSION BASED VISIBILITY ===
 //   const isAdmin = currentUserType === "ADMIN";
 //   const isCRM = currentUserType === "CRM";
+//   const isAccounts = currentUserType === "ACCOUNTS";
+//   const isFinance = currentUserType === "PAYMENT";
 
+//   // Summary → Sirf ADMIN ko dikhega
 //   const canSeeSummary = isAdmin;
-//   const canSeePayment = isAdmin || isCRM || currentUserType === "ACCOUNTS" || currentUserType === "FINANCE";
-//   const canSeeOffice = isAdmin || isCRM || currentUserType === "ACCOUNTS" || currentUserType === "FINANCE";
 
+//   // Payment Dropdown → Kon kon dekh sakta hai aur kya-kya items
+//   const canSeePayment = isAdmin || isCRM || isAccounts || isFinance; 
+
+//   // Office Dropdown → Kon kon dekh sakta hai aur kya-kya items
+//   const canSeeOffice = isAdmin  || isAccounts ;
+
+//   // Individual Menu Items Permissions (Yeh future mein aur flexible banane ke liye best practice hai)
+//   const canSeeSchedulePayment = isAdmin || isCRM || isAccounts || isFinance;
+//   const canSeeReconciliation = isAdmin || isFinance || isAccounts;
+//   const canSeeActualPaymentIn = isAdmin || isFinance || isAccounts;
+//   const canSeeTransferBankToBank = isAdmin || isFinance;
+//   const canSeePaymentForm = isAdmin  || isFinance;
+
+//   const canSeeApprovel = isAdmin  ;        // CRM aur Finance ko Approval dikhega
+//   const canSeeBillEntry = isAdmin   || isAccounts || isFinance || PAYMENT;
+//   const canSeeExpensesPayment = isAdmin || isAccounts || isFinance;
+
+//   // Active state for highlighting
 //   const [isSummarySelected, setIsSummarySelected] = useState(false);
 //   const [isPaymentSelected, setIsPaymentSelected] = useState(false);
 //   const [isOfficeSelected, setIsOfficeSelected] = useState(false);
 
+//   // Redirect Logic on Dashboard load
 //   useEffect(() => {
 //     if (!token) {
 //       navigate("/");
@@ -43,16 +65,20 @@
 //         navigate("/dashboard/summary", { replace: true });
 //       } else if (canSeePayment) {
 //         navigate("/dashboard/SchedulePayment", { replace: true });
+//       } else if (canSeeOffice) {
+//         navigate("/dashboard/Approvel1", { replace: true });
 //       } else {
 //         navigate("/", { replace: true });
 //       }
 //     }
-//   }, [token, location.pathname, navigate, canSeeSummary, canSeePayment]);
+//   }, [token, location.pathname, navigate, canSeeSummary, canSeePayment, canSeeOffice]);
 
+//   // Active menu highlight logic
 //   useEffect(() => {
 //     const path = location.pathname;
 
 //     setIsSummarySelected(path === "/dashboard/summary");
+
 //     setIsPaymentSelected(
 //       path.startsWith("/dashboard/SchedulePayment") ||
 //       path.startsWith("/dashboard/Reconciliation") ||
@@ -60,6 +86,7 @@
 //       path.startsWith("/dashboard/transfer-bank-to-bank") ||
 //       path.startsWith("/dashboard/form")
 //     );
+
 //     setIsOfficeSelected(
 //       path.startsWith("/dashboard/Approvel1") ||
 //       path.startsWith("/dashboard/BillEntry") ||
@@ -67,6 +94,7 @@
 //     );
 //   }, [location.pathname]);
 
+//   // Click outside to close dropdowns
 //   useEffect(() => {
 //     const handleClickOutside = (event) => {
 //       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -80,13 +108,17 @@
 //     return () => document.removeEventListener("mousedown", handleClickOutside);
 //   }, []);
 
+//   const handleLogout = () => {
+//     dispatch(logout());
+//     navigate("/");
+//   };
+
+//   // Navigation Functions
 //   const goToSummary = () => {
-//     if (!canSeeSummary) return;
 //     setIsMobileMenuOpen(false);
 //     navigate("/dashboard/summary");
 //   };
 
-//   // Payment navigation functions
 //   const goToSchedulePayment = () => {
 //     setIsMobileMenuOpen(false);
 //     setIsPaymentDropdownOpen(false);
@@ -122,7 +154,6 @@
 //     navigate("/dashboard/form");
 //   };
 
-//   // Office navigation functions
 //   const goToApprovel = () => {
 //     setIsMobileMenuOpen(false);
 //     setIsOfficeDropdownOpen(false);
@@ -142,11 +173,6 @@
 //     setIsOfficeDropdownOpen(false);
 //     setIsMobileOfficeDropdownOpen(false);
 //     navigate("/dashboard/ExpensesPayment");
-//   };
-
-//   const handleLogout = () => {
-//     dispatch(logout());
-//     navigate("/");
 //   };
 
 //   const togglePaymentDropdown = () => {
@@ -174,10 +200,8 @@
 //   return (
 //     <div className="min-h-screen w-full bg-[#1A3263] overflow-x-hidden">
 //       {/* NAVBAR */}
-//       <nav
-//         className="bg-[#1A3263] border-b border-gray-800 fixed top-0 left-0 right-0 z-50"
-//         style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)", height: "64px" }}
-//       >
+//       <nav className="bg-[#1A3263] border-b border-gray-800 fixed top-0 left-0 right-0 z-50" 
+//            style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)", height: "64px" }}>
 //         <div className="w-full px-3 sm:px-4 lg:px-6 h-full">
 //           <div className="flex items-center justify-between h-full">
 //             <div className="flex items-center gap-3">
@@ -188,6 +212,7 @@
 
 //             {/* Desktop Menu */}
 //             <div className="hidden lg:flex items-center gap-6">
+//               {/* Summary - Only Admin */}
 //               {canSeeSummary && (
 //                 <button
 //                   onClick={goToSummary}
@@ -211,32 +236,26 @@
 //                   >
 //                     <Building2 size={18} />
 //                     Office
-//                     <ChevronDown
-//                       size={16}
-//                       className={`transition-transform ${isOfficeDropdownOpen ? "rotate-180" : ""}`}
-//                     />
+//                     <ChevronDown size={16} className={`transition-transform ${isOfficeDropdownOpen ? "rotate-180" : ""}`} />
 //                   </button>
 
 //                   {isOfficeDropdownOpen && (
 //                     <div className="absolute top-full mt-2 right-0 w-56 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-50">
-//                       <button
-//                         onClick={goToApprovel}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
-//                       >
-//                         Approval
-//                       </button>
-//                       <button
-//                         onClick={goToBillEntry}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
-//                       >
-//                         Bill Entry
-//                       </button>
-//                       <button
-//                         onClick={goToExpensesPayment}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium"
-//                       >
-//                         Expenses Payment
-//                       </button>
+//                       {canSeeApprovel && (
+//                         <button onClick={goToApprovel} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+//                           Approval
+//                         </button>
+//                       )}
+//                       {canSeeBillEntry && (
+//                         <button onClick={goToBillEntry} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+//                           Bill Entry
+//                         </button>
+//                       )}
+//                       {canSeeExpensesPayment && (
+//                         <button onClick={goToExpensesPayment} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+//                           Expenses Payment
+//                         </button>
+//                       )}
 //                     </div>
 //                   )}
 //                 </div>
@@ -253,44 +272,36 @@
 //                   >
 //                     <DollarSign size={18} />
 //                     Payment
-//                     <ChevronDown
-//                       size={16}
-//                       className={`transition-transform ${isPaymentDropdownOpen ? "rotate-180" : ""}`}
-//                     />
+//                     <ChevronDown size={16} className={`transition-transform ${isPaymentDropdownOpen ? "rotate-180" : ""}`} />
 //                   </button>
 
 //                   {isPaymentDropdownOpen && (
 //                     <div className="absolute top-full mt-2 right-0 w-56 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-50">
-//                       <button
-//                         onClick={goToSchedulePayment}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
-//                       >
-//                         Schedule Payment
-//                       </button>
-//                       <button
-//                         onClick={goToReconciliation}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
-//                       >
-//                         Reconciliation
-//                       </button>
-//                       <button
-//                         onClick={goToActualPaymentIn}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
-//                       >
-//                         Actual Payment In
-//                       </button>
-//                       <button
-//                         onClick={goToTransferBankToBank}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
-//                       >
-//                         Transfer Bank To Bank
-//                       </button>
-//                       <button
-//                         onClick={goToPaymentForm}
-//                         className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium"
-//                       >
-//                         Payment Form
-//                       </button>
+//                       {canSeeSchedulePayment && (
+//                         <button onClick={goToSchedulePayment} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+//                           Schedule Payment
+//                         </button>
+//                       )}
+//                       {canSeeReconciliation && (
+//                         <button onClick={goToReconciliation} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+//                           Reconciliation
+//                         </button>
+//                       )}
+//                       {canSeeActualPaymentIn && (
+//                         <button onClick={goToActualPaymentIn} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+//                           Actual Payment In
+//                         </button>
+//                       )}
+//                       {canSeeTransferBankToBank && (
+//                         <button onClick={goToTransferBankToBank} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+//                           Transfer Bank To Bank
+//                         </button>
+//                       )}
+//                       {canSeePaymentForm && (
+//                         <button onClick={goToPaymentForm} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+//                           Payment Form
+//                         </button>
+//                       )}
 //                     </div>
 //                   )}
 //                 </div>
@@ -309,10 +320,7 @@
 //             </div>
 
 //             {/* Mobile Hamburger */}
-//             <button
-//               onClick={() => setIsMobileMenuOpen(true)}
-//               className="lg:hidden p-2 rounded-lg hover:bg-gray-800"
-//             >
+//             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-gray-800">
 //               <Menu className="w-6 h-6 text-gray-300" />
 //             </button>
 //           </div>
@@ -322,11 +330,8 @@
 //       {/* Mobile Sidebar */}
 //       {isMobileMenuOpen && (
 //         <>
-//           <div
-//             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-//             onClick={() => setIsMobileMenuOpen(false)}
-//           />
-//           <div className="fixed inset-y-0 right-0 w-72 bg-gray-900 shadow-2xl z-50 lg:hidden transform transition-transform duration-300">
+//           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+//           <div className="fixed inset-y-0 right-0 w-72 bg-gray-900 shadow-2xl z-50 lg:hidden">
 //             <div className="flex flex-col h-full">
 //               <div className="flex items-center justify-between p-5 border-b border-gray-800">
 //                 <h2 className="text-lg font-bold text-white">Menu</h2>
@@ -337,12 +342,7 @@
 
 //               <div className="flex-1 p-5 space-y-4 overflow-y-auto">
 //                 {canSeeSummary && (
-//                   <button
-//                     onClick={goToSummary}
-//                     className={`w-full flex items-center gap-3 px-5 py-4 rounded-lg transition-all ${
-//                       isSummarySelected ? "bg-amber-600/25 text-amber-400 border-l-4 border-amber-500" : "text-gray-300 hover:bg-gray-800"
-//                     }`}
-//                   >
+//                   <button onClick={goToSummary} className={`w-full flex items-center gap-3 px-5 py-4 rounded-lg transition-all ${isSummarySelected ? "bg-amber-600/25 text-amber-400 border-l-4 border-amber-500" : "text-gray-300 hover:bg-gray-800"}`}>
 //                     <BarChart3 size={22} />
 //                     <span className="font-medium">Summary</span>
 //                   </button>
@@ -351,42 +351,19 @@
 //                 {/* Office Dropdown - Mobile */}
 //                 {canSeeOffice && (
 //                   <div className="w-full">
-//                     <button
-//                       onClick={toggleMobileOfficeDropdown}
-//                       className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${
-//                         isOfficeSelected ? "bg-blue-600/25 text-blue-400 border-l-4 border-blue-500" : "text-gray-300 hover:bg-gray-800"
-//                       }`}
-//                     >
+//                     <button onClick={toggleMobileOfficeDropdown} className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${isOfficeSelected ? "bg-blue-600/25 text-blue-400 border-l-4 border-blue-500" : "text-gray-300 hover:bg-gray-800"}`}>
 //                       <div className="flex items-center gap-3">
 //                         <Building2 size={22} />
 //                         <span className="font-medium">Office</span>
 //                       </div>
-//                       <ChevronDown
-//                         size={18}
-//                         className={`transition-transform ${isMobileOfficeDropdownOpen ? "rotate-180" : ""}`}
-//                       />
+//                       <ChevronDown size={18} className={`transition-transform ${isMobileOfficeDropdownOpen ? "rotate-180" : ""}`} />
 //                     </button>
 
 //                     {isMobileOfficeDropdownOpen && (
 //                       <div className="mt-2 ml-4 space-y-2">
-//                         <button
-//                           onClick={goToApprovel}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Approval
-//                         </button>
-//                         <button
-//                           onClick={goToBillEntry}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Bill Entry
-//                         </button>
-//                         <button
-//                           onClick={goToExpensesPayment}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Expenses Payment
-//                         </button>
+//                         {canSeeApprovel && <button onClick={goToApprovel} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Approval</button>}
+//                         {canSeeBillEntry && <button onClick={goToBillEntry} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Bill Entry</button>}
+//                         {canSeeExpensesPayment && <button onClick={goToExpensesPayment} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Expenses Payment</button>}
 //                       </div>
 //                     )}
 //                   </div>
@@ -395,54 +372,21 @@
 //                 {/* Payment Dropdown - Mobile */}
 //                 {canSeePayment && (
 //                   <div className="w-full">
-//                     <button
-//                       onClick={toggleMobilePaymentDropdown}
-//                       className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${
-//                         isPaymentSelected ? "bg-emerald-600/25 text-emerald-400 border-l-4 border-emerald-500" : "text-gray-300 hover:bg-gray-800"
-//                       }`}
-//                     >
+//                     <button onClick={toggleMobilePaymentDropdown} className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${isPaymentSelected ? "bg-emerald-600/25 text-emerald-400 border-l-4 border-emerald-500" : "text-gray-300 hover:bg-gray-800"}`}>
 //                       <div className="flex items-center gap-3">
 //                         <DollarSign size={22} />
 //                         <span className="font-medium">Payment</span>
 //                       </div>
-//                       <ChevronDown
-//                         size={18}
-//                         className={`transition-transform ${isMobilePaymentDropdownOpen ? "rotate-180" : ""}`}
-//                       />
+//                       <ChevronDown size={18} className={`transition-transform ${isMobilePaymentDropdownOpen ? "rotate-180" : ""}`} />
 //                     </button>
 
 //                     {isMobilePaymentDropdownOpen && (
 //                       <div className="mt-2 ml-4 space-y-2">
-//                         <button
-//                           onClick={goToSchedulePayment}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Schedule Payment
-//                         </button>
-//                         <button
-//                           onClick={goToReconciliation}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Reconciliation
-//                         </button>
-//                         <button
-//                           onClick={goToActualPaymentIn}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Actual Payment In
-//                         </button>
-//                         <button
-//                           onClick={goToTransferBankToBank}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Transfer Bank To Bank
-//                         </button>
-//                         <button
-//                           onClick={goToPaymentForm}
-//                           className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
-//                         >
-//                           Payment Form
-//                         </button>
+//                         {canSeeSchedulePayment && <button onClick={goToSchedulePayment} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Schedule Payment</button>}
+//                         {canSeeReconciliation && <button onClick={goToReconciliation} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Reconciliation</button>}
+//                         {canSeeActualPaymentIn && <button onClick={goToActualPaymentIn} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Actual Payment In</button>}
+//                         {canSeeTransferBankToBank && <button onClick={goToTransferBankToBank} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Transfer Bank To Bank</button>}
+//                         {canSeePaymentForm && <button onClick={goToPaymentForm} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Payment Form</button>}
 //                       </div>
 //                     )}
 //                   </div>
@@ -450,10 +394,7 @@
 //               </div>
 
 //               <div className="p-5 border-t border-gray-800">
-//                 <button
-//                   onClick={handleLogout}
-//                   className="w-full flex items-center justify-center gap-3 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-red-400 transition-colors"
-//                 >
+//                 <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-red-400 transition-colors">
 //                   <LogOut size={22} />
 //                   <span className="font-medium">Logout</span>
 //                 </button>
@@ -476,6 +417,9 @@
 // export default Dashboard;
 
 
+
+
+//////
 
 
 
@@ -506,26 +450,30 @@ const Dashboard = () => {
   const isAdmin = currentUserType === "ADMIN";
   const isCRM = currentUserType === "CRM";
   const isAccounts = currentUserType === "ACCOUNTS";
-  const isFinance = currentUserType === "PAYMENT";
+  const isFinance = currentUserType === "PAYMENT"; // PAYMENT userType = Finance role
+  const isVRN = currentUserType === "VRN"; // PAYMENT userType = Finance role
 
   // Summary → Sirf ADMIN ko dikhega
-  const canSeeSummary = isAdmin;
+  const canSeeSummary = isAdmin || isVRN;
 
-  // Payment Dropdown → Kon kon dekh sakta hai aur kya-kya items
-  const canSeePayment = isAdmin || isCRM || isAccounts || isFinance;
+  // Payment Dropdown → Kon kon dekh sakta hai
+  const canSeePayment = isAdmin || isCRM || isAccounts || isFinance || isVRN;
 
-  // Office Dropdown → Kon kon dekh sakta hai aur kya-kya items
-  const canSeeOffice = isAdmin  || isAccounts ;
+  // ✅ Office Dropdown → PAYMENT user bhi dekh sakta hai (Bill Entry ke liye)
+  const canSeeOffice = isAdmin || isAccounts || isFinance;
 
-  // Individual Menu Items Permissions (Yeh future mein aur flexible banane ke liye best practice hai)
-  const canSeeSchedulePayment = isAdmin || isCRM || isAccounts || isFinance;
-  const canSeeReconciliation = isAdmin || isFinance || isAccounts;
+  // Individual Menu Items Permissions
+  const canSeeSchedulePayment = isAdmin || isCRM || isAccounts || isFinance || isVRN;
+  const canSeeReconciliation = isAdmin || isFinance || isAccounts ;
   const canSeeActualPaymentIn = isAdmin || isFinance || isAccounts;
   const canSeeTransferBankToBank = isAdmin || isFinance;
-  const canSeePaymentForm = isAdmin  || isFinance;
+  const canSeePaymentForm = isAdmin || isFinance;
 
-  const canSeeApprovel = isAdmin  ;        // CRM aur Finance ko Approval dikhega
-  const canSeeBillEntry = isAdmin   || isAccounts || isFinance;
+  const canSeeApprovel = isAdmin;
+  
+  // ✅ PAYMENT (isFinance) ko Bill Entry dikhega
+  const canSeeBillEntry = isAdmin || isAccounts || isFinance;
+  
   const canSeeExpensesPayment = isAdmin || isAccounts || isFinance;
 
   // Active state for highlighting
@@ -546,7 +494,7 @@ const Dashboard = () => {
       } else if (canSeePayment) {
         navigate("/dashboard/SchedulePayment", { replace: true });
       } else if (canSeeOffice) {
-        navigate("/dashboard/Approvel1", { replace: true });
+        navigate("/dashboard/BillEntry", { replace: true });
       } else {
         navigate("/", { replace: true });
       }
@@ -680,8 +628,10 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen w-full bg-[#1A3263] overflow-x-hidden">
       {/* NAVBAR */}
-      <nav className="bg-[#1A3263] border-b border-gray-800 fixed top-0 left-0 right-0 z-50" 
-           style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)", height: "64px" }}>
+      <nav
+        className="bg-[#1A3263] border-b border-gray-800 fixed top-0 left-0 right-0 z-50"
+        style={{ boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)", height: "64px" }}
+      >
         <div className="w-full px-3 sm:px-4 lg:px-6 h-full">
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-3">
@@ -697,7 +647,9 @@ const Dashboard = () => {
                 <button
                   onClick={goToSummary}
                   className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isSummarySelected ? "bg-amber-600 text-white shadow-md" : "text-gray-300 hover:bg-gray-800"
+                    isSummarySelected
+                      ? "bg-amber-600 text-white shadow-md"
+                      : "text-gray-300 hover:bg-gray-800"
                   }`}
                 >
                   <BarChart3 size={18} />
@@ -711,28 +663,44 @@ const Dashboard = () => {
                   <button
                     onClick={toggleOfficeDropdown}
                     className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                      isOfficeSelected ? "bg-blue-600 text-white shadow-md" : "text-gray-300 hover:bg-gray-800"
+                      isOfficeSelected
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-300 hover:bg-gray-800"
                     }`}
                   >
                     <Building2 size={18} />
                     Office
-                    <ChevronDown size={16} className={`transition-transform ${isOfficeDropdownOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${
+                        isOfficeDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
 
                   {isOfficeDropdownOpen && (
                     <div className="absolute top-full mt-2 right-0 w-56 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-50">
                       {canSeeApprovel && (
-                        <button onClick={goToApprovel} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+                        <button
+                          onClick={goToApprovel}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
+                        >
                           Approval
                         </button>
                       )}
                       {canSeeBillEntry && (
-                        <button onClick={goToBillEntry} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+                        <button
+                          onClick={goToBillEntry}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
+                        >
                           Bill Entry
                         </button>
                       )}
                       {canSeeExpensesPayment && (
-                        <button onClick={goToExpensesPayment} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                        <button
+                          onClick={goToExpensesPayment}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium"
+                        >
                           Expenses Payment
                         </button>
                       )}
@@ -747,38 +715,60 @@ const Dashboard = () => {
                   <button
                     onClick={togglePaymentDropdown}
                     className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
-                      isPaymentSelected ? "bg-emerald-600 text-white shadow-md" : "text-gray-300 hover:bg-gray-800"
+                      isPaymentSelected
+                        ? "bg-emerald-600 text-white shadow-md"
+                        : "text-gray-300 hover:bg-gray-800"
                     }`}
                   >
                     <DollarSign size={18} />
                     Payment
-                    <ChevronDown size={16} className={`transition-transform ${isPaymentDropdownOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${
+                        isPaymentDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
 
                   {isPaymentDropdownOpen && (
                     <div className="absolute top-full mt-2 right-0 w-56 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden z-50">
                       {canSeeSchedulePayment && (
-                        <button onClick={goToSchedulePayment} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+                        <button
+                          onClick={goToSchedulePayment}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
+                        >
                           Schedule Payment
                         </button>
                       )}
                       {canSeeReconciliation && (
-                        <button onClick={goToReconciliation} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+                        <button
+                          onClick={goToReconciliation}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
+                        >
                           Reconciliation
                         </button>
                       )}
                       {canSeeActualPaymentIn && (
-                        <button onClick={goToActualPaymentIn} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+                        <button
+                          onClick={goToActualPaymentIn}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
+                        >
                           Actual Payment In
                         </button>
                       )}
                       {canSeeTransferBankToBank && (
-                        <button onClick={goToTransferBankToBank} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800">
+                        <button
+                          onClick={goToTransferBankToBank}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium border-b border-gray-800"
+                        >
                           Transfer Bank To Bank
                         </button>
                       )}
                       {canSeePaymentForm && (
-                        <button onClick={goToPaymentForm} className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium">
+                        <button
+                          onClick={goToPaymentForm}
+                          className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors text-sm font-medium"
+                        >
                           Payment Form
                         </button>
                       )}
@@ -800,7 +790,10 @@ const Dashboard = () => {
             </div>
 
             {/* Mobile Hamburger */}
-            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-gray-800">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-800"
+            >
               <Menu className="w-6 h-6 text-gray-300" />
             </button>
           </div>
@@ -810,19 +803,32 @@ const Dashboard = () => {
       {/* Mobile Sidebar */}
       {isMobileMenuOpen && (
         <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
           <div className="fixed inset-y-0 right-0 w-72 bg-gray-900 shadow-2xl z-50 lg:hidden">
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-5 border-b border-gray-800">
                 <h2 className="text-lg font-bold text-white">Menu</h2>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-gray-800 rounded-lg">
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 hover:bg-gray-800 rounded-lg"
+                >
                   <X className="w-6 h-6 text-gray-300" />
                 </button>
               </div>
 
               <div className="flex-1 p-5 space-y-4 overflow-y-auto">
                 {canSeeSummary && (
-                  <button onClick={goToSummary} className={`w-full flex items-center gap-3 px-5 py-4 rounded-lg transition-all ${isSummarySelected ? "bg-amber-600/25 text-amber-400 border-l-4 border-amber-500" : "text-gray-300 hover:bg-gray-800"}`}>
+                  <button
+                    onClick={goToSummary}
+                    className={`w-full flex items-center gap-3 px-5 py-4 rounded-lg transition-all ${
+                      isSummarySelected
+                        ? "bg-amber-600/25 text-amber-400 border-l-4 border-amber-500"
+                        : "text-gray-300 hover:bg-gray-800"
+                    }`}
+                  >
                     <BarChart3 size={22} />
                     <span className="font-medium">Summary</span>
                   </button>
@@ -831,19 +837,52 @@ const Dashboard = () => {
                 {/* Office Dropdown - Mobile */}
                 {canSeeOffice && (
                   <div className="w-full">
-                    <button onClick={toggleMobileOfficeDropdown} className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${isOfficeSelected ? "bg-blue-600/25 text-blue-400 border-l-4 border-blue-500" : "text-gray-300 hover:bg-gray-800"}`}>
+                    <button
+                      onClick={toggleMobileOfficeDropdown}
+                      className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${
+                        isOfficeSelected
+                          ? "bg-blue-600/25 text-blue-400 border-l-4 border-blue-500"
+                          : "text-gray-300 hover:bg-gray-800"
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
                         <Building2 size={22} />
                         <span className="font-medium">Office</span>
                       </div>
-                      <ChevronDown size={18} className={`transition-transform ${isMobileOfficeDropdownOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform ${
+                          isMobileOfficeDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
 
                     {isMobileOfficeDropdownOpen && (
                       <div className="mt-2 ml-4 space-y-2">
-                        {canSeeApprovel && <button onClick={goToApprovel} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Approval</button>}
-                        {canSeeBillEntry && <button onClick={goToBillEntry} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Bill Entry</button>}
-                        {canSeeExpensesPayment && <button onClick={goToExpensesPayment} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Expenses Payment</button>}
+                        {canSeeApprovel && (
+                          <button
+                            onClick={goToApprovel}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Approval
+                          </button>
+                        )}
+                        {canSeeBillEntry && (
+                          <button
+                            onClick={goToBillEntry}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Bill Entry
+                          </button>
+                        )}
+                        {canSeeExpensesPayment && (
+                          <button
+                            onClick={goToExpensesPayment}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Expenses Payment
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -852,21 +891,68 @@ const Dashboard = () => {
                 {/* Payment Dropdown - Mobile */}
                 {canSeePayment && (
                   <div className="w-full">
-                    <button onClick={toggleMobilePaymentDropdown} className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${isPaymentSelected ? "bg-emerald-600/25 text-emerald-400 border-l-4 border-emerald-500" : "text-gray-300 hover:bg-gray-800"}`}>
+                    <button
+                      onClick={toggleMobilePaymentDropdown}
+                      className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-lg transition-all ${
+                        isPaymentSelected
+                          ? "bg-emerald-600/25 text-emerald-400 border-l-4 border-emerald-500"
+                          : "text-gray-300 hover:bg-gray-800"
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
                         <DollarSign size={22} />
                         <span className="font-medium">Payment</span>
                       </div>
-                      <ChevronDown size={18} className={`transition-transform ${isMobilePaymentDropdownOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform ${
+                          isMobilePaymentDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
 
                     {isMobilePaymentDropdownOpen && (
                       <div className="mt-2 ml-4 space-y-2">
-                        {canSeeSchedulePayment && <button onClick={goToSchedulePayment} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Schedule Payment</button>}
-                        {canSeeReconciliation && <button onClick={goToReconciliation} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Reconciliation</button>}
-                        {canSeeActualPaymentIn && <button onClick={goToActualPaymentIn} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Actual Payment In</button>}
-                        {canSeeTransferBankToBank && <button onClick={goToTransferBankToBank} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Transfer Bank To Bank</button>}
-                        {canSeePaymentForm && <button onClick={goToPaymentForm} className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm">Payment Form</button>}
+                        {canSeeSchedulePayment && (
+                          <button
+                            onClick={goToSchedulePayment}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Schedule Payment
+                          </button>
+                        )}
+                        {canSeeReconciliation && (
+                          <button
+                            onClick={goToReconciliation}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Reconciliation
+                          </button>
+                        )}
+                        {canSeeActualPaymentIn && (
+                          <button
+                            onClick={goToActualPaymentIn}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Actual Payment In
+                          </button>
+                        )}
+                        {canSeeTransferBankToBank && (
+                          <button
+                            onClick={goToTransferBankToBank}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Transfer Bank To Bank
+                          </button>
+                        )}
+                        {canSeePaymentForm && (
+                          <button
+                            onClick={goToPaymentForm}
+                            className="w-full text-left px-5 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all text-sm"
+                          >
+                            Payment Form
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -874,7 +960,10 @@ const Dashboard = () => {
               </div>
 
               <div className="p-5 border-t border-gray-800">
-                <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-red-400 transition-colors">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-3 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg text-red-400 transition-colors"
+                >
                   <LogOut size={22} />
                   <span className="font-medium">Logout</span>
                 </button>
